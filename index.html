@@ -1524,14 +1524,17 @@ function initPin(){
 }
 
 function showPinOverlay(mode){
-  pinMode=mode;pinBuffer='';pinNewBuffer='';
+  pinMode=mode;
+  pinBuffer='';
+  // Só reseta pinNewBuffer no início do fluxo, não na confirmação
+  if(mode!=='set2')pinNewBuffer='';
   updatePinDots();
   document.getElementById('pin-overlay').style.display='flex';
   document.getElementById('pin-err').textContent='';
   document.getElementById('pin-subtitle').textContent=
     mode==='check'?'Digite seu PIN':
     mode==='set1'?'Crie um PIN de 4 dígitos':
-    'Repita o PIN';
+    'Repita o PIN para confirmar';
 }
 
 function hidePinOverlay(){document.getElementById('pin-overlay').style.display='none';}
