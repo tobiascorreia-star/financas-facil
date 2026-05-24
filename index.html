@@ -12,6 +12,7 @@
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon.svg">
 <title>FinançasFácil</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -228,8 +229,92 @@ datalist{}
 /* business days badge */
 .bd-badge{font-size:10px;background:var(--blue-bg);color:var(--blue-dark);border:1px solid var(--blue);border-radius:20px;padding:1px 6px;font-weight:600;white-space:nowrap}
 
+/* ── SUPABASE / AUTH ──────────────────────────────────────── */
+.auth-overlay{position:fixed;inset:0;background:var(--bg);z-index:990;display:flex;align-items:center;justify-content:center;padding:1.5rem}
+.auth-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:400px;padding:2rem;text-align:center}
+.auth-logo{font-size:52px;margin-bottom:.5rem}
+.auth-title{font-size:20px;font-weight:700;margin-bottom:.25rem}
+.auth-sub{font-size:13px;color:var(--text2);margin-bottom:1.75rem;line-height:1.6}
+.auth-divider{display:flex;align-items:center;gap:10px;margin:1rem 0;color:var(--text2);font-size:12px}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.auth-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:11px 14px;font-size:14px;color:var(--text);margin-bottom:10px}
+.auth-input:focus{outline:none;border-color:var(--green)}
+.auth-btn{width:100%;padding:12px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.auth-btn.google{background:#fff;border:1.5px solid var(--border2);color:#333;margin-bottom:10px}
+.auth-btn.google:hover{background:#f5f5f5}
+.auth-btn.primary{background:var(--green);color:#fff}
+.auth-btn.primary:hover{background:var(--green-dark)}
+.auth-btn.secondary{background:none;border:1.5px solid var(--border);color:var(--text);margin-top:8px}
+.auth-toggle{font-size:12px;color:var(--text2);margin-top:12px}
+.auth-toggle a{color:var(--green);cursor:pointer;text-decoration:none;font-weight:600}
+.auth-err{font-size:12px;color:var(--red-dark);background:var(--red-bg);border-radius:7px;padding:8px 12px;margin-bottom:10px;display:none}
+/* Status screens */
+.status-screen{position:fixed;inset:0;background:var(--bg);z-index:990;display:flex;align-items:center;justify-content:center;padding:1.5rem}
+.status-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:380px;padding:2rem;text-align:center}
+.status-icon{font-size:56px;margin-bottom:1rem}
+.status-title{font-size:18px;font-weight:700;margin-bottom:.5rem}
+.status-desc{font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:1.5rem}
+/* Admin panel */
+.admin-user-card{background:var(--surface2);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.admin-avatar{width:38px;height:38px;border-radius:50%;background:var(--green-bg);color:var(--green-dark);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0}
+.admin-user-info{flex:1;min-width:0}
+.admin-user-email{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.admin-user-date{font-size:11px;color:var(--text2)}
+.admin-user-actions{display:flex;gap:6px;flex-shrink:0}
+.role-badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700}
+.role-badge.pending{background:var(--amber-bg);color:var(--amber-dark)}
+.role-badge.approved{background:var(--green-bg);color:var(--green-dark)}
+.role-badge.rejected{background:var(--red-bg);color:var(--red-dark)}
+
 /* BACKUP */
 .drop-zone-over{border-color:var(--green)!important;background:var(--green-bg)!important}
+
+/* ── AUTH ────────────────────────────────────────────────── */
+.auth-overlay{position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;align-items:center;justify-content:center;padding:1rem}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;width:100%;max-width:400px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.12)}
+.auth-header{background:var(--green);padding:2rem;text-align:center;color:#fff}
+.auth-logo{font-size:48px;margin-bottom:.5rem}
+.auth-app-name{font-size:22px;font-weight:700}
+.auth-tagline{font-size:12px;opacity:.85;margin-top:4px}
+.auth-body{padding:1.5rem}
+.auth-tabs{display:flex;background:var(--surface2);border-radius:10px;padding:3px;margin-bottom:1.25rem}
+.auth-tab{flex:1;padding:8px;border:none;background:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);transition:all .2s}
+.auth-tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.auth-field{margin-bottom:.875rem}
+.auth-label{font-size:12px;color:var(--text2);font-weight:500;margin-bottom:4px;display:block}
+.auth-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;font-size:14px;color:var(--text);transition:border .2s}
+.auth-input:focus{outline:none;border-color:var(--green)}
+.auth-btn{width:100%;padding:12px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:.75rem}
+.auth-btn.primary{background:var(--green);color:#fff}.auth-btn.primary:hover{background:var(--green-dark)}
+.auth-btn.google{background:var(--surface2);border:1.5px solid var(--border);color:var(--text)}.auth-btn.google:hover{background:var(--surface)}
+.auth-divider{text-align:center;font-size:12px;color:var(--text3);margin:.875rem 0;position:relative}
+.auth-divider::before,.auth-divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:var(--border)}
+.auth-divider::before{left:0}.auth-divider::after{right:0}
+.auth-err{font-size:12px;color:var(--red-dark);background:var(--red-bg);border:1px solid var(--red);border-radius:8px;padding:9px 12px;margin-bottom:.875rem;display:none}
+.auth-footer{text-align:center;font-size:11px;color:var(--text3);padding:.875rem;border-top:1px solid var(--border)}
+/* Status screens */
+.status-screen{position:fixed;inset:0;background:var(--bg);z-index:400;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center;gap:1rem}
+.status-icon{font-size:64px}.status-title{font-size:22px;font-weight:700}
+.status-desc{font-size:14px;color:var(--text2);max-width:320px;line-height:1.6}
+.status-btn{background:var(--surface);border:1.5px solid var(--border2);border-radius:10px;padding:10px 24px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text)}
+.status-btn.danger{border-color:var(--red);color:var(--red-dark)}
+.pulse{animation:pulse 2s infinite}
+/* Admin */
+.admin-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:1.25rem}
+.admin-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.875rem;text-align:center}
+.admin-stat-val{font-size:28px;font-weight:700;margin-bottom:2px}.admin-stat-label{font-size:11px;color:var(--text2)}
+.user-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:.875rem 1rem;display:flex;align-items:center;gap:12px;margin-bottom:7px;flex-wrap:wrap}
+.user-avatar{width:38px;height:38px;border-radius:50%;background:var(--green-bg);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--green-dark);flex-shrink:0}
+.user-info{flex:1;min-width:0}.user-name{font-size:13px;font-weight:600}.user-email{font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.user-date{font-size:10px;color:var(--text3);margin-top:2px}
+.user-actions{display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap}
+.role-badge{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:700}
+.role-badge.pending{background:var(--amber-bg);color:var(--amber-dark)}.role-badge.approved{background:var(--green-bg);color:var(--green-dark)}.role-badge.rejected{background:var(--red-bg);color:var(--red-dark)}.role-badge.admin{background:var(--blue-bg);color:var(--blue-dark)}
+.btn-approve{background:var(--green-bg);border:1px solid var(--green);color:var(--green-dark);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer}
+.btn-reject{background:var(--red-bg);border:1px solid var(--red);color:var(--red-dark);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer}
+.btn-revoke{background:var(--surface2);border:1px solid var(--border2);color:var(--text2);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer}
+/* Sync dot */
+.sync-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-left:4px;vertical-align:middle}
+.sync-dot.syncing{background:var(--amber);animation:pulse 1s infinite}.sync-dot.ok{background:var(--green)}.sync-dot.err{background:var(--red)}
 
 /* PIN LOCK */
 .pin-overlay{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem}
@@ -305,12 +390,46 @@ datalist{}
 </head>
 <body>
 
+<!-- ── AUTH OVERLAY ─────────────────────────────────────── -->
+<div class="auth-overlay" id="auth-overlay">
+  <div class="auth-card">
+    <div class="auth-header"><div class="auth-logo">💰</div><div class="auth-app-name">FinançasFácil</div><div class="auth-tagline">MegaFllex Soluções</div></div>
+    <div class="auth-body">
+      <div class="auth-tabs"><button class="auth-tab active" onclick="authTab('login',this)">Entrar</button><button class="auth-tab" onclick="authTab('register',this)">Criar conta</button></div>
+      <div id="auth-err" class="auth-err"></div>
+      <div id="reg-name" class="auth-field" style="display:none"><label class="auth-label">Seu nome</label><input class="auth-input" id="auth-name" type="text" placeholder="Como quer ser chamado?"></div>
+      <div class="auth-field"><label class="auth-label">E-mail</label><input class="auth-input" id="auth-email" type="email" placeholder="seu@email.com"></div>
+      <div class="auth-field"><label class="auth-label">Senha</label><input class="auth-input" id="auth-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')authSubmit()"></div>
+      <button class="auth-btn primary" id="auth-submit-btn" onclick="authSubmit()"><span id="auth-btn-text">Entrar</span></button>
+      <div class="auth-divider">ou</div>
+      <button class="auth-btn google" onclick="loginGoogle()">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        Continuar com Google
+      </button>
+    </div>
+    <div class="auth-footer">© 2026 MegaFllex Soluções · megafllexfinancas.com.br</div>
+  </div>
+</div>
+<!-- ── AGUARDANDO APROVAÇÃO ──────────────────────────────── -->
+<div class="status-screen" id="pending-screen" style="display:none">
+  <div class="status-icon pulse">⏳</div><div class="status-title">Aguardando aprovação</div>
+  <div class="status-desc">Sua conta foi criada! O administrador aprovará seu acesso em breve.</div>
+  <button class="status-btn" onclick="checkMyStatus()">🔄 Verificar status</button>
+  <button class="status-btn danger" onclick="logout()">Sair</button>
+</div>
+<!-- ── ACESSO NEGADO ─────────────────────────────────────── -->
+<div class="status-screen" id="rejected-screen" style="display:none">
+  <div class="status-icon">🚫</div><div class="status-title">Acesso negado</div>
+  <div class="status-desc">Sua solicitação foi recusada. Entre em contato com o administrador.</div>
+  <button class="status-btn danger" onclick="logout()">Sair</button>
+</div>
+
+<div id="main-app" style="display:none">
 <div class="topbar">
-  <div class="topbar-logo">💰 <span>Finanças</span>Fácil</div>
-  <div style="display:flex;align-items:center;gap:8px">
-    <button class="bell-btn" id="bell-btn" onclick="reqNotif()">
-      🔔 <span id="bell-lbl">Ativar alertas</span>
-    </button>
+  <div class="topbar-logo">💰 <span>Finanças</span>Fácil <span class="sync-dot ok" id="sync-dot" title="Sincronizado"></span></div>
+  <div style="display:flex;align-items:center;gap:6px">
+    <button class="bell-btn" id="bell-btn" onclick="reqNotif()">🔔 <span id="bell-lbl">Alertas</span></button>
+    <button class="bell-btn" onclick="logout()" title="Sair" style="border-color:var(--border)">👤 <span id="user-name-btn">Sair</span></button>
     <nav class="nav desktop-nav" id="desktop-nav">
       <button class="nb active" onclick="showPage('dash')" id="nav-dash">🏠 Painel</button>
       <button class="nb" onclick="showPage('pay')" id="nav-pay">📋 Pagamentos</button>
@@ -319,6 +438,8 @@ datalist{}
       <button class="nb" onclick="showPage('rep')" id="nav-rep">📊 Relatórios</button>
       <button class="nb" onclick="showPage('cfg')" id="nav-cfg">🔔 Avisos</button>
       <button class="nb" onclick="showPage('bkp')" id="nav-bkp">💾 Backup</button>
+      <button class="nb" onclick="showPage('admin')" id="nav-admin" style="display:none">👑 Admin</button>
+      <button class="nb" onclick="showPage('adm')" id="nav-adm" style="display:none">👑 Admin</button>
     </nav>
   </div>
 </div>
@@ -375,7 +496,22 @@ datalist{}
     <div class="cal-detail" id="cal-detail"></div>
   </div>
 
-  <!-- ARQUIVO -->
+  <!-- ADMIN -->
+  <div class="page" id="page-admin">
+    <div class="sec-hdr">
+      <span class="sec-title">👑 Painel Administrativo</span>
+      <span style="font-size:11px;color:var(--text2)" id="admin-count"></span>
+    </div>
+    <div class="filters" style="margin-bottom:1rem">
+      <button class="fc active" onclick="adminFilter('all',this)">Todos</button>
+      <button class="fc" onclick="adminFilter('pending',this)">⏳ Pendentes</button>
+      <button class="fc" onclick="adminFilter('approved',this)">✅ Aprovados</button>
+      <button class="fc" onclick="adminFilter('rejected',this)">❌ Reprovados</button>
+    </div>
+    <div id="admin-users-list">
+      <div class="empty"><span class="empty-icon">⏳</span><p>Carregando usuários...</p></div>
+    </div>
+  </div>
   <div class="page" id="page-arch">
     <div class="sec-hdr"><span class="sec-title">📁 Arquivo</span><span style="font-size:12px;color:var(--text2)">Meses anteriores</span></div>
     <div id="arch"></div>
@@ -480,60 +616,21 @@ datalist{}
     </div>
   </div>
 
-  <!-- BACKUP -->
-  <div class="page" id="page-bkp">
-    <div class="sec-hdr"><span class="sec-title">💾 Backup</span></div>
-
-    <!-- EXPORTAR -->
-    <div class="scard">
-      <div class="stitle"><div class="stitle-icon">📤</div>Exportar dados</div>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.6">Salve todos os seus pagamentos em um arquivo <strong>.json</strong> no seu celular ou PC. Use para fazer backup ou transferir para outro dispositivo.</p>
-      <button class="btn pri" style="width:100%;padding:11px;font-size:13px" onclick="exportData()">
-        📥 Exportar como JSON
-      </button>
-      <div style="margin-top:10px">
-        <button class="btn" style="width:100%;padding:11px;font-size:13px" onclick="exportCSV()">
-          📊 Exportar como CSV (Excel)
-        </button>
-      </div>
-      <div id="bkp-export-info" style="margin-top:10px;font-size:12px;color:var(--text2);display:none"></div>
-    </div>
-
-    <!-- IMPORTAR -->
-    <div class="scard">
-      <div class="stitle"><div class="stitle-icon">📂</div>Importar dados</div>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.6">Restaure um backup <strong>.json</strong> exportado por este app. Você pode escolher <em>substituir tudo</em> ou <em>mesclar</em> com os dados atuais.</p>
-
-      <div style="border:2px dashed var(--border2);border-radius:10px;padding:1.25rem;text-align:center;margin-bottom:1rem;cursor:pointer;transition:all .2s" id="drop-zone" onclick="document.getElementById('import-file').click()" ondragover="dzOver(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event)">
-        <div style="font-size:32px;margin-bottom:8px">📂</div>
-        <div style="font-size:13px;font-weight:600;color:var(--text)">Toque para selecionar arquivo</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:4px">ou arraste o .json aqui</div>
-      </div>
-      <input type="file" id="import-file" accept=".json" style="display:none" onchange="fileSelected(this)">
-
-      <div id="import-preview" style="display:none">
-        <div style="background:var(--surface2);border-radius:9px;padding:12px;margin-bottom:12px;font-size:13px" id="import-preview-info"></div>
-        <div style="display:flex;gap:8px">
-          <button class="btn" style="flex:1;padding:10px;font-size:12px" onclick="doImport('merge')">🔀 Mesclar</button>
-          <button class="btn pri" style="flex:1;padding:10px;font-size:12px" onclick="doImport('replace')">♻️ Substituir tudo</button>
-        </div>
-        <div style="font-size:11px;color:var(--text2);margin-top:8px;line-height:1.5">
-          <strong>Mesclar:</strong> adiciona novos registros sem apagar os atuais.<br>
-          <strong>Substituir:</strong> apaga tudo e carrega apenas o arquivo importado.
-        </div>
-      </div>
-    </div>
-
-    <!-- STATS -->
-    <div class="scard">
-      <div class="stitle"><div class="stitle-icon">🗄️</div>Dados armazenados</div>
-      <div id="bkp-stats"></div>
-      <button class="btn" style="width:100%;margin-top:12px;padding:10px;font-size:12px;color:var(--red-dark);border-color:var(--red)" onclick="clearAllData()">
-        🗑️ Apagar todos os dados
-      </button>
-    </div>
+  <!-- ADMIN -->
+  <div class="page" id="page-adm">
+    <div class="sec-hdr"><span class="sec-title">👑 Painel Admin</span><button class="btn" onclick="loadAdminUsers()">🔄 Atualizar</button></div>
+    <div class="admin-stats" id="admin-stats"></div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:.75rem;color:var(--amber-dark)">⏳ Aguardando aprovação</div>
+    <div id="admin-pending-list"></div>
+    <div style="font-size:13px;font-weight:700;margin:.875rem 0 .75rem;color:var(--green-dark)">✅ Aprovados</div>
+    <div id="admin-approved-list"></div>
+    <div style="font-size:13px;font-weight:700;margin:.875rem 0 .75rem;color:var(--red-dark)">🚫 Reprovados</div>
+    <div id="admin-rejected-list"></div>
   </div>
-</div>
+</div><!-- end content -->
+  </div>
+</div><!-- end content -->
+</div><!-- end main-app -->
 
 <!-- BOTTOM NAV (mobile) -->
 <div class="bottom-nav">
@@ -644,6 +741,68 @@ datalist{}
   </div>
 </div>
 
+<!-- AUTH — LOGIN -->
+<div class="auth-overlay" id="auth-overlay" style="display:none">
+  <div class="auth-box">
+    <div class="auth-logo">💰</div>
+    <div class="auth-title">FinançasFácil</div>
+    <div class="auth-sub">MegaFllex Soluções<br>Faça login para continuar</div>
+
+    <button class="auth-btn google" onclick="loginGoogle()">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Entrar com Google
+    </button>
+
+    <div class="auth-divider">ou</div>
+
+    <div id="auth-err" class="auth-err"></div>
+
+    <!-- LOGIN FORM -->
+    <div id="form-login">
+      <input class="auth-input" id="auth-email" type="email" placeholder="Seu e-mail">
+      <input class="auth-input" id="auth-pass" type="password" placeholder="Senha" onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="auth-btn primary" onclick="doLogin()">Entrar</button>
+      <button class="auth-btn secondary" onclick="switchForm('register')">Criar conta</button>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div id="form-register" style="display:none">
+      <input class="auth-input" id="reg-name" type="text" placeholder="Seu nome completo">
+      <input class="auth-input" id="reg-email" type="email" placeholder="Seu e-mail">
+      <input class="auth-input" id="reg-pass" type="password" placeholder="Senha (mín. 6 caracteres)" onkeydown="if(event.key==='Enter')doRegister()">
+      <button class="auth-btn primary" onclick="doRegister()">Criar conta</button>
+      <button class="auth-btn secondary" onclick="switchForm('login')">Já tenho conta</button>
+    </div>
+
+    <!-- FORGOT PASSWORD -->
+    <div class="auth-toggle">
+      <span id="forgot-link" style="display:none">
+        <a onclick="doForgotPassword()">Esqueci minha senha</a>
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS — AGUARDANDO APROVAÇÃO -->
+<div class="status-screen" id="pending-screen" style="display:none">
+  <div class="status-box">
+    <div class="status-icon">⏳</div>
+    <div class="status-title">Aguardando aprovação</div>
+    <div class="status-desc">Sua conta foi criada com sucesso!<br>Aguarde o administrador aprovar seu acesso.<br><br>Você será notificado assim que liberado.</div>
+    <button class="btn" style="width:100%;padding:11px" onclick="sbSignOut()">Sair</button>
+  </div>
+</div>
+
+<!-- STATUS — ACESSO NEGADO -->
+<div class="status-screen" id="rejected-screen" style="display:none">
+  <div class="status-box">
+    <div class="status-icon">🚫</div>
+    <div class="status-title">Acesso negado</div>
+    <div class="status-desc">Seu acesso foi reprovado pelo administrador.<br>Entre em contato com a MegaFllex Soluções para mais informações.</div>
+    <button class="btn" style="width:100%;padding:11px" onclick="sbSignOut()">Sair</button>
+  </div>
+</div>
+
 <!-- PIN LOCK OVERLAY -->
 <div class="pin-overlay" id="pin-overlay" style="display:none">
   <div class="pin-logo">💰</div>
@@ -679,6 +838,260 @@ datalist{}
 </footer>
 
 <script>
+/* ══════════════════════════════════════════
+   SUPABASE — CONFIGURAÇÃO
+══════════════════════════════════════════ */
+const SB_URL='https://znjjhhrtoiznhxjrlexs.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpuampoaHJ0b2l6bmh4anJsZXhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1OTg2NjAsImV4cCI6MjA5NTE3NDY2MH0.sMzoTZTdef_A7cl7QZ3w_djpbPCy72IP5CgR8aE_2YU';
+const ADMIN_EMAIL='tobiascorreia@gmail.com';
+const sb=supabase.createClient(SB_URL,SB_KEY);
+let currentUser=null,currentProfile=null,realtimeSub=null;
+let adminAllUsers=[],adminFilter_='all';
+
+/* ── AUTH FLOW ─────────────────────────────────────────── */
+async function initAuth(){
+  // Verifica sessão existente
+  const{data:{session}}=await sb.auth.getSession();
+  if(session)await handleSession(session);
+  else showAuthScreen();
+
+  // Escuta mudanças de auth
+  sb.auth.onAuthStateChange(async(event,session)=>{
+    if(event==='SIGNED_IN'&&session)await handleSession(session);
+    else if(event==='SIGNED_OUT'){currentUser=null;currentProfile=null;showAuthScreen();}
+  });
+}
+
+async function handleSession(session){
+  currentUser=session.user;
+  // Busca perfil
+  const{data:profile}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();
+  currentProfile=profile;
+
+  // Admin sempre tem acesso
+  if(currentUser.email===ADMIN_EMAIL){
+    showApp(true);return;
+  }
+  // Usuário normal — verifica role
+  const role=profile?.role||'pending';
+  if(role==='approved')showApp(false);
+  else if(role==='rejected')showScreen('rejected');
+  else showScreen('pending');
+}
+
+function showAuthScreen(){
+  hide('auth-overlay',false);hide('pending-screen');hide('rejected-screen');
+  document.getElementById('auth-overlay').style.display='flex';
+}
+function showScreen(s){
+  hide('auth-overlay');hide('pending-screen');hide('rejected-screen');
+  document.getElementById(s+'-screen').style.display='flex';
+}
+function showApp(isAdmin=false){
+  hide('auth-overlay');hide('pending-screen');hide('rejected-screen');
+  // Mostra nav admin se for admin
+  const adminNav=document.getElementById('nav-admin');
+  const adminBnav=document.getElementById('bnav-admin');
+  if(adminNav)adminNav.style.display=isAdmin?'':'none';
+  if(adminBnav)adminBnav.style.display=isAdmin?'flex':'none';
+  // Mostra info do usuário no topbar
+  updateUserBar();
+  // Carrega dados do Supabase
+  loadDataFromSupabase();
+  // Inicia realtime
+  initRealtime();
+  // Init PIN se configurado
+  initPin();
+}
+function hide(id,toNone=true){const el=document.getElementById(id);if(el)el.style.display=toNone?'none':'';}
+
+function updateUserBar(){
+  const name=currentProfile?.full_name||currentUser?.email?.split('@')[0]||'Usuário';
+  const isAdmin=currentUser?.email===ADMIN_EMAIL;
+  const bar=document.getElementById('user-bar');
+  if(bar)bar.innerHTML=`<span style="font-size:12px;color:var(--text2)">👤 ${name}${isAdmin?' 👑':''}</span>
+    <button class="btn" style="padding:4px 10px;font-size:11px" onclick="sbSignOut()">Sair</button>`;
+}
+
+/* ── AUTH ACTIONS ──────────────────────────────────────── */
+function switchForm(f){
+  document.getElementById('form-login').style.display=f==='login'?'':'none';
+  document.getElementById('form-register').style.display=f==='register'?'':'none';
+  document.getElementById('forgot-link').style.display=f==='login'?'':'none';
+  document.getElementById('auth-err').style.display='none';
+}
+
+async function loginGoogle(){
+  const{error}=await sb.auth.signInWithOAuth({
+    provider:'google',
+    options:{redirectTo:window.location.href}
+  });
+  if(error)showAuthErr(error.message);
+}
+
+async function doLogin(){
+  const email=document.getElementById('auth-email').value.trim();
+  const pass=document.getElementById('auth-pass').value;
+  if(!email||!pass){showAuthErr('Preencha e-mail e senha.');return;}
+  const{error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error)showAuthErr('E-mail ou senha incorretos.');
+}
+
+async function doRegister(){
+  const name=document.getElementById('reg-name').value.trim();
+  const email=document.getElementById('reg-email').value.trim();
+  const pass=document.getElementById('reg-pass').value;
+  if(!name||!email||!pass){showAuthErr('Preencha todos os campos.');return;}
+  if(pass.length<6){showAuthErr('Senha mínima: 6 caracteres.');return;}
+  const{error}=await sb.auth.signUp({
+    email,password:pass,
+    options:{data:{full_name:name}}
+  });
+  if(error)showAuthErr(error.message);
+  else showAuthErr('✅ Conta criada! Aguarde aprovação do administrador.','green');
+}
+
+async function doForgotPassword(){
+  const email=document.getElementById('auth-email').value.trim();
+  if(!email){showAuthErr('Digite seu e-mail primeiro.');return;}
+  await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.href});
+  showAuthErr('✅ Link de redefinição enviado para '+email,'green');
+}
+
+async function sbSignOut(){
+  await sb.auth.signOut();
+  pays=[];renderAll();
+}
+
+function showAuthErr(msg,type=''){
+  const el=document.getElementById('auth-err');
+  el.textContent=msg;el.style.display='block';
+  el.style.background=type==='green'?'var(--green-bg)':'var(--red-bg)';
+  el.style.color=type==='green'?'var(--green-dark)':'var(--red-dark)';
+}
+
+/* ── DADOS — SUPABASE ──────────────────────────────────── */
+function dbToLocal(p){
+  return{
+    id:p.id,name:p.name,amount:Number(p.amount)||0,
+    owner:p.owner||'',due:p.due||'',paidDate:p.paid_date||'',
+    status:p.status||'pending',recur:p.recur||'none',
+    category:p.category||'',wallet:p.wallet||'',
+    currency:p.currency||'BRL',tags:p.tags||[],
+    notes:p.notes||'',archived:p.archived||false,
+    archivedMonth:p.archived_month||''
+  };
+}
+function localToDb(p){
+  return{
+    id:typeof p.id==='number'&&p.id>1000000000000?undefined:p.id,
+    user_id:currentUser.id,
+    name:p.name,amount:p.amount,owner:p.owner,
+    due:p.due||null,paid_date:p.paidDate||null,
+    status:p.status,recur:p.recur,category:p.category,
+    wallet:p.wallet,currency:p.currency,tags:p.tags,
+    notes:p.notes,archived:p.archived,
+    archived_month:p.archivedMonth||null,
+    updated_at:new Date().toISOString()
+  };
+}
+
+async function loadDataFromSupabase(){
+  if(!currentUser)return;
+  const{data,error}=await sb.from('payments').select('*').eq('user_id',currentUser.id).order('created_at');
+  if(data)pays=data.map(dbToLocal);
+  else pays=[];
+  // Carrega owners das tags localmente
+  try{const o=localStorage.getItem('ff_owners');if(o)owners=JSON.parse(o);}catch(e){}
+  try{const t=localStorage.getItem('ff_tags');if(t)allTags=JSON.parse(t);}catch(e){}
+  pays.forEach(p=>{
+    if(p.owner&&!owners.includes(p.owner))owners.push(p.owner);
+    (p.tags||[]).forEach(t=>{if(!allTags.includes(t))allTags.push(t);});
+  });
+  renderAll();
+}
+
+async function sbSavePayment(p){
+  const dbp=localToDb(p);
+  if(typeof p.id==='number'&&p.id>1000000000000){
+    // novo (id gerado localmente pelo Date.now)
+    delete dbp.id;
+    const{data,error}=await sb.from('payments').insert(dbp).select().single();
+    if(data){pays=pays.map(x=>x.id===p.id?dbToLocal(data):x);}
+  }else{
+    await sb.from('payments').upsert({...dbp,id:p.id});
+  }
+}
+
+async function sbDeletePayment(id){
+  if(typeof id==='number'&&id>1000000000000)return;
+  await sb.from('payments').delete().eq('id',id).eq('user_id',currentUser.id);
+}
+
+/* ── REALTIME ──────────────────────────────────────────── */
+function initRealtime(){
+  if(realtimeSub)sb.removeChannel(realtimeSub);
+  realtimeSub=sb.channel('payments-changes')
+    .on('postgres_changes',{event:'*',schema:'public',table:'payments',filter:`user_id=eq.${currentUser.id}`},
+      ()=>loadDataFromSupabase())
+    .subscribe();
+}
+
+/* ══════════════════════════════════════════
+   ADMIN — GERENCIAR USUÁRIOS
+══════════════════════════════════════════ */
+async function loadAdminUsers(){
+  const{data,error}=await sb.rpc('get_all_profiles');
+  if(error){document.getElementById('admin-users-list').innerHTML=`<div class="empty"><span class="empty-icon">❌</span><p>Erro ao carregar usuários.<br>${error.message}</p></div>`;return;}
+  adminAllUsers=data||[];
+  renderAdminUsers();
+}
+
+function adminFilter(f,el){
+  adminFilter_=f;
+  document.querySelectorAll('#page-admin .fc').forEach(e=>e.classList.remove('active'));
+  if(el)el.classList.add('active');
+  renderAdminUsers();
+}
+
+function renderAdminUsers(){
+  let list=adminAllUsers;
+  if(adminFilter_!=='all')list=list.filter(u=>u.role===adminFilter_);
+  const el=document.getElementById('admin-users-list');
+  const count=document.getElementById('admin-count');
+  if(count)count.textContent=`${adminAllUsers.filter(u=>u.role==='pending').length} pendente(s)`;
+  if(!list.length){el.innerHTML=`<div class="empty"><span class="empty-icon">👥</span><p>Nenhum usuário neste filtro.</p></div>`;return;}
+  el.innerHTML=list.map(u=>{
+    const ini=(u.full_name||u.email||'?').charAt(0).toUpperCase();
+    const date=new Date(u.created_at).toLocaleDateString('pt-BR');
+    const isAdmin=u.email===ADMIN_EMAIL;
+    const actions=isAdmin?`<span class="role-badge approved">Admin</span>`:
+      u.role==='pending'?`
+        <button class="btn pri" style="padding:5px 10px;font-size:11px" onclick="changeUserRole('${u.id}','approved')">✅ Aprovar</button>
+        <button class="btn" style="padding:5px 10px;font-size:11px;color:var(--red-dark);border-color:var(--red)" onclick="changeUserRole('${u.id}','rejected')">❌ Reprovar</button>`:
+      u.role==='approved'?`
+        <span class="role-badge approved">✅ Aprovado</span>
+        <button class="btn ico" onclick="changeUserRole('${u.id}','rejected')" title="Revogar acesso">🚫</button>`:
+      `<span class="role-badge rejected">❌ Reprovado</span>
+       <button class="btn ico" onclick="changeUserRole('${u.id}','approved')" title="Aprovar">✅</button>`;
+    return`<div class="admin-user-card">
+      <div class="admin-avatar">${ini}</div>
+      <div class="admin-user-info">
+        <div class="admin-user-email">${u.email}</div>
+        <div class="admin-user-date">${u.full_name||'Sem nome'} · ${date}</div>
+      </div>
+      <div class="admin-user-actions">${actions}</div>
+    </div>`;
+  }).join('');
+}
+
+async function changeUserRole(userId,role){
+  const{error}=await sb.rpc('manage_user_role',{target_user_id:userId,new_role:role});
+  if(error){toast('Erro: '+error.message,'err');return;}
+  toast(role==='approved'?'✅ Usuário aprovado!':'🚫 Acesso revogado.');
+  loadAdminUsers();
+}
+
 'use strict';
 let pays=[],eid=null,curF='all',curSt='pending',curRec='none';
 let C={visual:true,d1:3,d2:false,d2v:7,onopen:true,rec:true};
@@ -998,7 +1411,8 @@ function quickPay(id){
     return;
   }
   p.status='paid';p.paidDate=TODAY();
-  saveLocal();renderAll();
+  if(currentUser)sbSavePayment(p);else saveLocal();
+  renderAll();
   toast(`✅ ${p.name} marcado como pago!`);
 
   // ── AUTO-RECORRÊNCIA ──────────────────────────────────
@@ -1151,6 +1565,7 @@ function showPage(p){
   document.getElementById('page-'+p).classList.add('active');
   if(p==='bkp')renderBkpStats();
   if(p==='cal')renderCal();
+  if(p==='admin')loadAdminUsers();
   setTimeout(fixBottomPadding,50);
 }
 function setF(f,el){curF=f;document.querySelectorAll('.fc').forEach(e=>e.classList.remove('active'));el.classList.add('active');renderPay();}
@@ -1209,8 +1624,8 @@ async function savePay(){
   saveLocal();cmo();renderAll();toast(eid?'✏️ Atualizado!':'✅ Pagamento criado!');
 }
 function editP(id){const p=pays.find(x=>x.id===id);if(p)openModal(p);}
-function delP(id){if(!confirm('Excluir este pagamento?'))return;pays=pays.filter(x=>x.id!==id);saveLocal();renderAll();toast('🗑️ Excluído.');}
-function archP(id){const p=pays.find(x=>x.id===id);if(!p)return;p.archived=true;p.archivedMonth=p.due?p.due.slice(0,7):TODAY().slice(0,7);saveLocal();renderAll();toast('📁 Arquivado!');}
+function delP(id){if(!confirm('Excluir este pagamento?'))return;pays=pays.filter(x=>x.id!==id);if(currentUser)sbDeletePayment(id);else saveLocal();renderAll();toast('🗑️ Excluído.');}
+function archP(id){const p=pays.find(x=>x.id===id);if(!p)return;p.archived=true;p.archivedMonth=p.due?p.due.slice(0,7):TODAY().slice(0,7);if(currentUser)sbSavePayment(p);else saveLocal();renderAll();toast('📁 Arquivado!');}
 
 function toast(msg,t=''){
   const el=document.getElementById('toast');el.textContent=msg;el.className='toast'+(t?' '+t:'');
@@ -1617,13 +2032,26 @@ setTimeout(fixBottomPadding,900);
 
 function cmo(){document.getElementById('mo').classList.remove('open');closeOwnerDrop();closeTagDrop();}
 
-// Init
-loadLocal();
+// ── Override saveLocal/deletePayment/archivePayment para Supabase ──
+async function saveLocal(){
+  if(currentUser)return; // Supabase cuida disso
+  try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
+}
+
+// ── Override renderAll para chamar fixBottomPadding ──
+const _origRenderAll=renderAll;
+
+// ── INIT ──────────────────────────────────────────────────
 applyC();
-renderAll();
 updateBell();
-initPin();
-if(C.onopen)setTimeout(()=>doCheck(false),1500);
+
+// Inicia auth Supabase
+initAuth().catch(()=>{
+  // Fallback: usa localStorage se Supabase offline
+  loadLocal();renderAll();initPin();
+  if(C.onopen)setTimeout(()=>doCheck(false),1500);
+});
+
 // ── SERVICE WORKER (PWA offline) ──────────────────────────
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
