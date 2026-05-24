@@ -991,20 +991,36 @@ async function loadDataFromSupabase(){
 }
 
 async function sbSavePayment(p){
-  const dbp=localToDb(p);
-  if(typeof p.id==='number'&&p.id>1000000000000){
-    // novo (id gerado localmente pelo Date.now)
-    delete dbp.id;
-    const{data,error}=await sb.from('payments').insert(dbp).select().single();
-    if(data){pays=pays.map(x=>x.id===p.id?dbToLocal(data):x);}
-  }else{
-    await sb.from('payments').upsert({...dbp,id:p.id});
+  setSyncDot('syncing');
+  try{
+    const dbp=localToDb(p);
+    if(typeof p.id==='number'&&p.id>1000000000000){
+      delete dbp.id;
+      const{data,error}=await sb.from('payments').insert(dbp).select().single();
+      if(error)throw error;
+      if(data){pays=pays.map(x=>x.id===p.id?dbToLocal(data):x);}
+    }else{
+      const{error}=await sb.from('payments').upsert({...dbp,id:p.id});
+      if(error)throw error;
+    }
+    setSyncDot('ok');
+  }catch(e){
+    setSyncDot('err');
+    toast('❌ Erro ao salvar: '+e.message,'err');
   }
+}
+
+function setSyncDot(state){
+  const d=document.getElementById('sync-dot');
+  if(d)d.className='sync-dot '+state;
 }
 
 async function sbDeletePayment(id){
   if(typeof id==='number'&&id>1000000000000)return;
-  await sb.from('payments').delete().eq('id',id).eq('user_id',currentUser.id);
+  setSyncDot('syncing');
+  const{error}=await sb.from('payments').delete().eq('id',id).eq('user_id',currentUser.id);
+  setSyncDot(error?'err':'ok');
+  if(error)toast('❌ Erro ao excluir: '+error.message,'err');
 }
 
 /* ── REALTIME ──────────────────────────────────────────── */
@@ -1200,8 +1216,21 @@ function applyC(){
   document.getElementById('d2v').value=C.d2v;
   document.getElementById('d2-row').style.display=C.d2?'flex':'none';
 }
-function sv(k,v){C[k]=v;saveCfg();renderAll();}
-function tog(k,el){C[k]=!C[k];el.className='toggle'+(C[k]?' on':'');if(k==='d2')document.getElementById('d2-row').style.display=C.d2?'flex':'none';saveCfg();renderAll();}
+function sv(k,v){
+  C[k]=v;
+  saveCfg();
+  // Reaplica só o campo visual relevante
+  if(k==='d1'){const el=document.getElementById('d1');if(el&&el!==document.activeElement)el.value=v;}
+  if(k==='d2v'){const el=document.getElementById('d2v');if(el&&el!==document.activeElement)el.value=v;}
+  renderAll();
+}
+function tog(k,el){
+  C[k]=!C[k];
+  el.className='toggle'+(C[k]?' on':'');
+  if(k==='d2')document.getElementById('d2-row').style.display=C.d2?'flex':'none';
+  saveCfg();
+  renderAll();
+}
 
 /* ── 4. OWNER AUTOCOMPLETE ─────────────────────────────── */
 function ownerInput(inp){
@@ -2021,6 +2050,10 @@ async function saveLocal(){
 const _origRenderAll=renderAll;
 
 // ── INIT ──────────────────────────────────────────────────
+// Carrega config do localStorage ANTES de aplicar
+try{const c=localStorage.getItem('ff_cfg');if(c)C={...C,...JSON.parse(c)};}catch(e){}
+try{const o=localStorage.getItem('ff_owners');if(o)owners=JSON.parse(o);}catch(e){}
+try{const t=localStorage.getItem('ff_tags');if(t)allTags=JSON.parse(t);}catch(e){}
 applyC();
 updateBell();
 
