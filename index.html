@@ -1625,17 +1625,18 @@ function pitem(p,mini=false){
   const recb=p.recur&&p.recur!=='none'?`<span class="badge rec">🔁 ${rlbl(p.recur)}</span>`:'';
   const nameClass=isPaid?'nm strike':'nm';
 
-  // Linha de data compacta
+  // Linha de data compacta — sem sobreposição
   let dateLine='';
   if(p.due){
     if(wasAdjusted&&!isPaid){
-      // Mostra só a data efetiva com badge compacto na mesma linha
-      dateLine=`<span style="display:inline-flex;align-items:center;gap:4px;flex-wrap:nowrap" title="Original: ${fmtD(p.due)} (${adjustReason})">
-        📅 <s style="opacity:.45;font-size:10px">${fmtD(p.due)}</s>→<strong>${fmtD(eff)}</strong>
-        <span style="font-size:9px;background:var(--blue-bg);color:var(--blue-dark);border-radius:20px;padding:1px 6px;border:1px solid var(--blue);white-space:nowrap">1°útil${bdu===0?' · Hoje':''}</span>
-      </span>`;
+      dateLine=`<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;font-size:11px;margin-top:2px">
+        📅 <s style="opacity:.45">${fmtD(p.due)}</s>
+        <span style="opacity:.6">→</span>
+        <strong>${fmtD(eff)}</strong>
+        <span style="font-size:9px;background:var(--blue-bg);color:var(--blue-dark);border-radius:20px;padding:1px 7px;border:1px solid var(--blue);white-space:nowrap">1° útil${bdu===0?' · Hoje':''}</span>
+      </div>`;
     }else{
-      dateLine=`<span>📅 ${fmtD(p.due)}${!isPaid&&bdu!==null?` <span style="font-size:10px;color:var(--blue-dark)">(${bduLabel})</span>`:''}</span>`;
+      dateLine=`<div style="font-size:11px;margin-top:2px">📅 ${fmtD(p.due)}${!isPaid&&bdu!==null?` <span style="font-size:10px;color:var(--blue-dark)">(${bduLabel})</span>`:''}</div>`;
     }
   }
 
@@ -1649,16 +1650,18 @@ function pitem(p,mini=false){
       <div class="pi-name"><span class="${nameClass}">${p.name}</span>${wtag}${otag}</div>
       <div class="pi-meta">
         ${p.owner?`<span>👤 ${p.owner}</span>`:''}
-        ${dateLine}
-        ${p.paidDate?`<span>✓ pago ${fmtD(p.paidDate)}</span>`:''}
         ${p.category?`<span>${p.category}</span>`:''}
         ${walletBadge}
       </div>
+      ${dateLine}
+      ${p.paidDate?`<div style="font-size:11px;color:var(--green-dark);margin-top:2px">✓ pago ${fmtD(p.paidDate)}</div>`:''}
       ${tagsHtml}
     </div>
     <div class="pi-right">
       <div class="pi-amt ${w||w2?'warn':st}">${curSym} ${Number(p.amount).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
-      <div style="display:flex;gap:3px;flex-wrap:wrap;justify-content:flex-end"><span class="badge ${st}">${slbl(st)}</span>${recb}</div>
+      <div style="display:flex;gap:3px;flex-wrap:wrap;justify-content:flex-end;margin-top:4px">
+        <span class="badge ${st}">${slbl(st)}</span>${recb}
+      </div>
       ${!mini?`<div class="pi-acts">
         <button class="btn ico" onclick="archP(${p.id})" title="Arquivar">📁</button>
         <button class="btn ico" onclick="editP(${p.id})" title="Editar">✏️</button>
