@@ -257,13 +257,21 @@ datalist{}
 .status-title{font-size:18px;font-weight:700;margin-bottom:.5rem}
 .status-desc{font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:1.5rem}
 /* Admin panel */
-.admin-user-card{background:var(--surface2);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:8px}
-.admin-avatar{width:38px;height:38px;border-radius:50%;background:var(--green-bg);color:var(--green-dark);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0}
+.admin-user-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px}
+.admin-user-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.admin-avatar{width:42px;height:42px;border-radius:50%;background:var(--green-bg);color:var(--green-dark);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0}
 .admin-user-info{flex:1;min-width:0}
-.admin-user-email{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.admin-user-date{font-size:11px;color:var(--text2)}
-.admin-user-actions{display:flex;gap:6px;flex-shrink:0}
-.role-badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700}
+.admin-user-name{font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.admin-user-email{font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.admin-user-date{font-size:10px;color:var(--text3);margin-top:2px}
+.admin-user-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.admin-actions{display:flex;gap:5px;flex-wrap:wrap}
+.admin-btn{padding:6px 11px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid;white-space:nowrap;transition:all .15s}
+.admin-btn.approve{background:var(--green-bg);color:var(--green-dark);border-color:var(--green)}
+.admin-btn.suspend-p{background:#F3E8FF;color:#7C3AED;border-color:#A78BFA}
+.admin-btn.suspend-d{background:#FEF3C7;color:#92400E;border-color:#F59E0B}
+.admin-btn.revoke{background:var(--red-bg);color:var(--red-dark);border-color:var(--red)}
+.role-badge{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:700;display:inline-flex;align-items:center;gap:3px}
 .role-badge.pending{background:var(--amber-bg);color:var(--amber-dark)}
 .role-badge.approved{background:var(--green-bg);color:var(--green-dark)}
 .role-badge.rejected{background:var(--red-bg);color:var(--red-dark)}
@@ -1270,19 +1278,19 @@ function adminActions(u){
   const r=u.role;
   let btns='';
   if(r==='pending'){
-    btns+=`<button class="btn pri" style="padding:5px 10px;font-size:11px" onclick="changeUserRole('${u.id}','approved')">✅ Aprovar</button>`;
-    btns+=`<button class="btn" style="padding:5px 10px;font-size:11px;color:var(--red-dark);border-color:var(--red)" onclick="changeUserRole('${u.id}','rejected')">❌ Reprovar</button>`;
+    btns+=`<button class="admin-btn approve" onclick="changeUserRole('${u.id}','approved')">✅ Aprovar</button>`;
+    btns+=`<button class="admin-btn revoke" onclick="changeUserRole('${u.id}','rejected')">❌ Reprovar</button>`;
   }else if(r==='approved'){
-    btns+=`<button class="btn" style="padding:5px 9px;font-size:11px;color:#7C3AED;border-color:#A78BFA" onclick="changeUserRole('${u.id}','suspended_provisional')">⏸️ Susp. prov.</button>`;
-    btns+=`<button class="btn" style="padding:5px 9px;font-size:11px;color:#92400E;border-color:#F59E0B" onclick="changeUserRole('${u.id}','suspended_definitive')">🔒 Susp. def.</button>`;
-    btns+=`<button class="btn" style="padding:5px 9px;font-size:11px;color:var(--red-dark);border-color:var(--red)" onclick="changeUserRole('${u.id}','rejected')">❌ Revogar</button>`;
+    btns+=`<button class="admin-btn suspend-p" onclick="changeUserRole('${u.id}','suspended_provisional')">⏸ Susp. prov.</button>`;
+    btns+=`<button class="admin-btn suspend-d" onclick="changeUserRole('${u.id}','suspended_definitive')">🔒 Susp. def.</button>`;
+    btns+=`<button class="admin-btn revoke" onclick="changeUserRole('${u.id}','rejected')">❌ Revogar</button>`;
   }else if(r==='suspended_provisional'||r==='suspended_definitive'){
-    btns+=`<button class="btn pri" style="padding:5px 10px;font-size:11px" onclick="changeUserRole('${u.id}','approved')">✅ Reativar</button>`;
-    btns+=`<button class="btn" style="padding:5px 9px;font-size:11px;color:var(--red-dark);border-color:var(--red)" onclick="changeUserRole('${u.id}','rejected')">❌ Revogar</button>`;
+    btns+=`<button class="admin-btn approve" onclick="changeUserRole('${u.id}','approved')">✅ Reativar</button>`;
+    btns+=`<button class="admin-btn revoke" onclick="changeUserRole('${u.id}','rejected')">❌ Revogar</button>`;
   }else if(r==='rejected'){
-    btns+=`<button class="btn pri" style="padding:5px 10px;font-size:11px" onclick="changeUserRole('${u.id}','approved')">✅ Aprovar</button>`;
+    btns+=`<button class="admin-btn approve" onclick="changeUserRole('${u.id}','approved')">✅ Aprovar</button>`;
   }
-  return`<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end">${btns}</div>`;
+  return btns;
 }
 
 function renderAdminUsers(){
@@ -1296,15 +1304,21 @@ function renderAdminUsers(){
   if(!list.length){el.innerHTML=`<div class="empty"><span class="empty-icon">👥</span><p>Nenhum usuário neste filtro.</p></div>`;return;}
   el.innerHTML=list.map(u=>{
     const ini=(u.full_name||u.email||'?').charAt(0).toUpperCase();
+    const name=u.full_name||u.email.split('@')[0];
     const date=new Date(u.created_at).toLocaleDateString('pt-BR');
     return`<div class="admin-user-card">
-      <div class="admin-avatar">${ini}</div>
-      <div class="admin-user-info">
-        <div class="admin-user-email">${u.email}</div>
-        <div class="admin-user-date">${u.full_name||'Sem nome'} · Cadastro: ${date}</div>
-        <div style="margin-top:4px">${roleBadge(u.role)}</div>
+      <div class="admin-user-top">
+        <div class="admin-avatar">${ini}</div>
+        <div class="admin-user-info">
+          <div class="admin-user-name">${name}</div>
+          <div class="admin-user-email">${u.email}</div>
+          <div class="admin-user-date">Cadastro: ${date}</div>
+        </div>
       </div>
-      <div class="admin-user-actions">${adminActions(u)}</div>
+      <div class="admin-user-bottom">
+        <div>${roleBadge(u.role)}</div>
+        <div class="admin-actions">${adminActions(u)}</div>
+      </div>
     </div>`;
   }).join('');
 }
