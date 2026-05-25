@@ -472,6 +472,7 @@ datalist{}
       <button class="fc active" onclick="adminFilter('all',this)">Todos</button>
       <button class="fc" onclick="adminFilter('pending',this)">⏳ Pendentes</button>
       <button class="fc" onclick="adminFilter('approved',this)">✅ Aprovados</button>
+      <button class="fc" onclick="adminFilter('suspended',this)">⏸️ Suspensos</button>
       <button class="fc" onclick="adminFilter('rejected',this)">❌ Reprovados</button>
     </div>
     <div id="admin-users-list">
@@ -769,6 +770,16 @@ datalist{}
   </div>
 </div>
 
+<!-- STATUS — SUSPENSO -->
+<div class="status-screen" id="suspended-screen" style="display:none">
+  <div class="status-box">
+    <div class="status-icon">🔒</div>
+    <div class="status-title">Acesso suspenso</div>
+    <div class="status-desc">Seu acesso foi suspenso pelo administrador.<br>Entre em contato com a MegaFllex Soluções.</div>
+    <button class="btn" style="width:100%;padding:11px" onclick="sbSignOut()">Sair</button>
+  </div>
+</div>
+
 <!-- PIN LOCK OVERLAY -->
 <div class="pin-overlay" id="pin-overlay" style="display:none">
   <div class="pin-logo">💰</div>
@@ -830,38 +841,47 @@ async function initAuth(){
 
 async function handleSession(session){
   currentUser=session.user;
-  // Busca perfil
   const{data:profile}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();
   currentProfile=profile;
-
-  // Admin sempre tem acesso
-  if(currentUser.email===ADMIN_EMAIL){
-    showApp(true);return;
-  }
-  // Usuário normal — verifica role
+  if(currentUser.email===ADMIN_EMAIL){showApp(true);return;}
   const role=profile?.role||'pending';
   if(role==='approved')showApp(false);
   else if(role==='rejected')showScreen('rejected');
-  else showScreen('pending');
+  else if(role==='suspended_provisional'||role==='suspended_definitive')showScreen('suspended');
+  else{showScreen('pending');startPendingListener();}
+}
+
+// Escuta em tempo real mudança de role — atualiza tela do usuário automaticamente
+function startPendingListener(){
+  const ch=sb.channel('profile-watch-'+currentUser.id)
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'profiles',filter:`id=eq.${currentUser.id}`},
+      payload=>{
+        const r=payload.new?.role;
+        sb.removeChannel(ch);
+        if(r==='approved')showApp(false);
+        else if(r==='rejected')showScreen('rejected');
+        else if(r==='suspended_provisional'||r==='suspended_definitive')showScreen('suspended');
+      })
+    .subscribe();
 }
 
 function showAuthScreen(){
   const app=document.getElementById('main-app');
   if(app)app.style.display='none';
-  hide('pending-screen');hide('rejected-screen');
+  ['pending-screen','rejected-screen','suspended-screen'].forEach(id=>hide(id));
   document.getElementById('auth-overlay').style.display='flex';
 }
 function showScreen(s){
   const app=document.getElementById('main-app');
   if(app)app.style.display='none';
-  hide('auth-overlay');hide('pending-screen');hide('rejected-screen');
-  document.getElementById(s+'-screen').style.display='flex';
+  hide('auth-overlay');hide('pending-screen');hide('rejected-screen');hide('suspended-screen');
+  const el=document.getElementById(s+'-screen');
+  if(el)el.style.display='flex';
 }
-// Alias para compatibilidade
-const logout=()=>sbSignOut();
+// Alias para compatibilidade com botões antigos
 function showApp(isAdmin=false){
   // Esconde telas de auth
-  hide('auth-overlay');hide('pending-screen');hide('rejected-screen');
+  ['auth-overlay','pending-screen','rejected-screen','suspended-screen'].forEach(id=>hide(id));
   // Mostra o app principal
   const app=document.getElementById('main-app');
   if(app)app.style.display='block';
@@ -938,9 +958,20 @@ async function doForgotPassword(){
 }
 
 async function sbSignOut(){
-  await sb.auth.signOut();
-  pays=[];renderAll();
+  try{await sb.auth.signOut();}catch(e){}
+  currentUser=null;currentProfile=null;
+  pays=[];
+  // Esconde o app e mostra o login
+  const app=document.getElementById('main-app');
+  if(app)app.style.display='none';
+  document.getElementById('auth-overlay').style.display='flex';
+  hide('pending-screen');hide('rejected-screen');
+  // Limpa user bar
+  const bar=document.getElementById('user-bar');
+  if(bar)bar.innerHTML='';
 }
+
+function logout(){sbSignOut();}
 
 function showAuthErr(msg,type=''){
   const el=document.getElementById('auth-err');
@@ -1049,41 +1080,71 @@ function adminFilter(f,el){
   renderAdminUsers();
 }
 
+function roleBadge(role){
+  const map={
+    pending:`<span class="role-badge pending">⏳ Pendente</span>`,
+    approved:`<span class="role-badge approved">✅ Aprovado</span>`,
+    rejected:`<span class="role-badge rejected">❌ Reprovado</span>`,
+    suspended_provisional:`<span class="role-badge" style="background:#F3E8FF;color:#7C3AED;border:1px solid #A78BFA">⏸️ Suspenso (prov.)</span>`,
+    suspended_definitive:`<span class="role-badge" style="background:#FEF3C7;color:#92400E;border:1px solid #F59E0B">🔒 Suspenso (def.)</span>`,
+  };
+  return map[role]||`<span class="role-badge">${role}</span>`;
+}
+
+function adminActions(u){
+  if(u.email===ADMIN_EMAIL)return`<span class="role-badge approved">👑 Admin</span>`;
+  const r=u.role;
+  let btns='';
+  if(r==='pending'){
+    btns+=`<button class="btn pri" style="padding:5px 10px;font-size:11px" onclick="changeUserRole('${u.id}','approved')">✅ Aprovar</button>`;
+    btns+=`<button class="btn" style="padding:5px 10px;font-size:11px;color:var(--red-dark);border-color:var(--red)" onclick="changeUserRole('${u.id}','rejected')">❌ Reprovar</button>`;
+  }else if(r==='approved'){
+    btns+=`<button class="btn" style="padding:5px 9px;font-size:11px;color:#7C3AED;border-color:#A78BFA" onclick="changeUserRole('${u.id}','suspended_provisional')">⏸️ Susp. prov.</button>`;
+    btns+=`<button class="btn" style="padding:5px 9px;font-size:11px;color:#92400E;border-color:#F59E0B" onclick="changeUserRole('${u.id}','suspended_definitive')">🔒 Susp. def.</button>`;
+    btns+=`<button class="btn" style="padding:5px 9px;font-size:11px;color:var(--red-dark);border-color:var(--red)" onclick="changeUserRole('${u.id}','rejected')">❌ Revogar</button>`;
+  }else if(r==='suspended_provisional'||r==='suspended_definitive'){
+    btns+=`<button class="btn pri" style="padding:5px 10px;font-size:11px" onclick="changeUserRole('${u.id}','approved')">✅ Reativar</button>`;
+    btns+=`<button class="btn" style="padding:5px 9px;font-size:11px;color:var(--red-dark);border-color:var(--red)" onclick="changeUserRole('${u.id}','rejected')">❌ Revogar</button>`;
+  }else if(r==='rejected'){
+    btns+=`<button class="btn pri" style="padding:5px 10px;font-size:11px" onclick="changeUserRole('${u.id}','approved')">✅ Aprovar</button>`;
+  }
+  return`<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end">${btns}</div>`;
+}
+
 function renderAdminUsers(){
   let list=adminAllUsers;
-  if(adminFilter_!=='all')list=list.filter(u=>u.role===adminFilter_);
+  if(adminFilter_!=='all')list=list.filter(u=>u.role===adminFilter_||
+    (adminFilter_==='suspended'&&(u.role==='suspended_provisional'||u.role==='suspended_definitive')));
   const el=document.getElementById('admin-users-list');
   const count=document.getElementById('admin-count');
-  if(count)count.textContent=`${adminAllUsers.filter(u=>u.role==='pending').length} pendente(s)`;
+  const pending=adminAllUsers.filter(u=>u.role==='pending').length;
+  if(count)count.textContent=pending>0?`⚠️ ${pending} pendente(s)`:'✅ Sem pendências';
   if(!list.length){el.innerHTML=`<div class="empty"><span class="empty-icon">👥</span><p>Nenhum usuário neste filtro.</p></div>`;return;}
   el.innerHTML=list.map(u=>{
     const ini=(u.full_name||u.email||'?').charAt(0).toUpperCase();
     const date=new Date(u.created_at).toLocaleDateString('pt-BR');
-    const isAdmin=u.email===ADMIN_EMAIL;
-    const actions=isAdmin?`<span class="role-badge approved">Admin</span>`:
-      u.role==='pending'?`
-        <button class="btn pri" style="padding:5px 10px;font-size:11px" onclick="changeUserRole('${u.id}','approved')">✅ Aprovar</button>
-        <button class="btn" style="padding:5px 10px;font-size:11px;color:var(--red-dark);border-color:var(--red)" onclick="changeUserRole('${u.id}','rejected')">❌ Reprovar</button>`:
-      u.role==='approved'?`
-        <span class="role-badge approved">✅ Aprovado</span>
-        <button class="btn ico" onclick="changeUserRole('${u.id}','rejected')" title="Revogar acesso">🚫</button>`:
-      `<span class="role-badge rejected">❌ Reprovado</span>
-       <button class="btn ico" onclick="changeUserRole('${u.id}','approved')" title="Aprovar">✅</button>`;
     return`<div class="admin-user-card">
       <div class="admin-avatar">${ini}</div>
       <div class="admin-user-info">
         <div class="admin-user-email">${u.email}</div>
-        <div class="admin-user-date">${u.full_name||'Sem nome'} · ${date}</div>
+        <div class="admin-user-date">${u.full_name||'Sem nome'} · Cadastro: ${date}</div>
+        <div style="margin-top:4px">${roleBadge(u.role)}</div>
       </div>
-      <div class="admin-user-actions">${actions}</div>
+      <div class="admin-user-actions">${adminActions(u)}</div>
     </div>`;
   }).join('');
 }
 
 async function changeUserRole(userId,role){
   const{error}=await sb.rpc('manage_user_role',{target_user_id:userId,new_role:role});
-  if(error){toast('Erro: '+error.message,'err');return;}
-  toast(role==='approved'?'✅ Usuário aprovado!':'🚫 Acesso revogado.');
+  if(error){toast('❌ Erro: '+error.message,'err');return;}
+  const msgs={
+    approved:'✅ Usuário aprovado e liberado!',
+    rejected:'❌ Acesso revogado.',
+    suspended_provisional:'⏸️ Usuário suspenso provisoriamente.',
+    suspended_definitive:'🔒 Usuário suspenso definitivamente.',
+  };
+  toast(msgs[role]||'Atualizado.');
   loadAdminUsers();
 }
 
