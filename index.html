@@ -102,7 +102,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 /* FILTERS */
 .filters{display:flex;gap:6px;margin-bottom:.875rem;flex-wrap:wrap}
 .fc{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:4px 11px;font-size:11px;cursor:pointer;color:var(--text2);transition:all .15s}
-.fc.active{background:var(--green-bg);border-color:var(--green);color:var(--green-dark);font-weight:600}
+.fc.active{background:var(--green);border-color:var(--green-dark);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(29,158,117,.25)}
 .si{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 11px;font-size:13px;color:var(--text);flex:1;min-width:130px}
 .si:focus{outline:none;border-color:var(--green)}
 
@@ -991,10 +991,11 @@ function renderDash(){
   const{od,w,w2}=alerts();const ac=pays.filter(p=>!p.archived);
   const total=ac.reduce((a,p)=>a+Number(p.amount),0);const paid=ac.filter(p=>p.status==='paid').reduce((a,p)=>a+Number(p.amount),0);
   const pend=ac.filter(p=>p.status==='pending'&&!isOD(p)).reduce((a,p)=>a+Number(p.amount),0);const odAmt=od.reduce((a,p)=>a+Number(p.amount),0);const wc=w.length+(C.d2?w2.length:0);
+  const vencer=ac.filter(p=>p.status!=='paid'&&!isOD(p)&&!!p.due);const vencerAmt=vencer.reduce((a,p)=>a+Number(p.amount),0);
   const bo=document.getElementById('banner-over');const bw=document.getElementById('banner-warn');
   if(C.visual&&od.length){bo.innerHTML=`<div class="alert-box danger"><span class="alert-ico">🔴</span><div class="alert-body"><div class="alert-title">${od.length} pagamento(s) atrasado(s) — ${fmt(odAmt)}</div>${od.slice(0,3).map(p=>{const eff=effectiveDue(p.due);const adj=eff!==p.due?` → ${fmtD(eff)}`:'';return`<div class="alert-item">• ${p.name} · ${fmtD(p.due)}${adj} · ${fmt(p.amount)}</div>`;}).join('')}</div><button class="alert-close" onclick="this.closest('.alert-box').remove()">✕</button></div>`;}else bo.innerHTML='';
   if(C.visual&&w.length){bw.innerHTML=`<div class="alert-box warn"><span class="alert-ico">⚠️</span><div class="alert-body"><div class="alert-title">Vence(m) em até ${C.d1} dia(s) útil(eis): ${w.length} pagamento(s)</div>${w.slice(0,3).map(p=>{const bd=diffBD(p.due);const eff=effectiveDue(p.due);const adj=eff!==p.due?` → ${fmtD(eff)}`:'';return`<div class="alert-item">• ${p.name} · ${fmtD(p.due)}${adj} · ${bd===0?'Hoje':bd+'du'} · ${fmt(p.amount)}</div>`;}).join('')}</div><button class="alert-close" onclick="this.closest('.alert-box').remove()">✕</button></div>`;}else bw.innerHTML='';
-  document.getElementById('metrics').innerHTML=`<div class="mc"><div class="mc-label">💳 Total geral</div><div class="mc-val b">${fmt(total)}</div></div><div class="mc"><div class="mc-label">✅ Pagos</div><div class="mc-val g">${fmt(paid)}</div></div><div class="mc"><div class="mc-label">⏳ Pendentes</div><div class="mc-val a">${fmt(pend)}</div></div><div class="mc"><div class="mc-label">🔴 Atrasados</div><div class="mc-val r">${fmt(odAmt)}</div></div>${wc>0?`<div class="mc"><div class="mc-label">⚠️ A vencer (dias úteis)</div><div class="mc-val a">${wc} item(s)</div></div>`:''}`;
+  document.getElementById('metrics').innerHTML=`<div class="mc"><div class="mc-label">💳 Total geral</div><div class="mc-val b">${fmt(total)}</div></div><div class="mc"><div class="mc-label">✅ Pagos</div><div class="mc-val g">${fmt(paid)}</div></div><div class="mc"><div class="mc-label">⏳ Pendentes</div><div class="mc-val a">${fmt(pend)}</div></div><div class="mc"><div class="mc-label">🔴 Atrasados</div><div class="mc-val r">${fmt(odAmt)}</div></div><div class="mc" style="cursor:pointer" onclick="showPage('pay');setF('warn',document.querySelector('.fc'))"><div class="mc-label">⚠️ A vencer</div><div class="mc-val a">${fmt(vencerAmt)}</div><div style="font-size:10px;color:var(--text3);margin-top:2px">${vencer.length} item(s)</div></div>`;
   const up=ac.filter(p=>p.status!=='paid').sort((a,b)=>(a.due||'').localeCompare(b.due||'')).slice(0,7);
   document.getElementById('upcoming').innerHTML=up.length?up.map(p=>pitem(p,true)).join(''):`<div class="empty"><span class="empty-icon">🎉</span><p>Tudo em dia! Nenhum pendente.</p></div>`;
 }
@@ -1080,7 +1081,7 @@ function renderPay(){
   else if(curF==='rec')list=list.filter(p=>p.recur&&p.recur!=='none');
   if(wf)list=list.filter(p=>p.wallet===wf);
   list.sort((a,b)=>(a.due||'').localeCompare(b.due||''));
-  document.getElementById('plist').innerHTML=list.length?list.map(p=>pitem(p)).join(''):`<div class="empty"><span class="empty-icon">📭</span><p>Nenhum pagamento encontrado.</p></div>`;
+  document.getElementById('plist').innerHTML=list.length?list.map(p=>pitem(p)).join(''):`<div class="empty"><span class="empty-icon">📭</span><p>Nenhum pagamento encontrado.</p><button class="btn" style="margin-top:10px;font-size:12px" onclick="document.getElementById('filter-wallet').value='';renderPay()">✕ Limpar filtro de carteira</button></div>`;
 }
 
 function renderArch(){
