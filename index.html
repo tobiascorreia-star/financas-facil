@@ -1129,22 +1129,33 @@ async function loadDataFromSupabase(){
 }
 
 async function sbSavePayment(p){
+  if(!currentUser){console.warn('sbSavePayment: no currentUser');return;}
   setSyncDot('syncing');
   try{
     const dbp=localToDb(p);
+    console.log('sbSavePayment payload:',dbp);
     if(typeof p.id==='number'&&p.id>1000000000000){
+      // Novo registro - id local temporário
       delete dbp.id;
       const{data,error}=await sb.from('payments').insert(dbp).select().single();
-      if(error)throw error;
-      if(data){pays=pays.map(x=>x.id===p.id?dbToLocal(data):x);}
+      if(error){console.error('INSERT error:',error);throw error;}
+      console.log('INSERT success:',data);
+      // Atualiza id local com id do banco
+      if(data){
+        pays=pays.map(x=>x.id===p.id?dbToLocal(data):x);
+        try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
+      }
     }else{
-      const{error}=await sb.from('payments').upsert({...dbp,id:p.id});
-      if(error)throw error;
+      // Update de registro existente
+      const{data,error}=await sb.from('payments').upsert({...dbp,id:p.id}).select();
+      if(error){console.error('UPSERT error:',error);throw error;}
+      console.log('UPSERT success:',data);
     }
     setSyncDot('ok');
   }catch(e){
     setSyncDot('err');
-    toast('❌ Erro ao salvar: '+e.message,'err');
+    toast('❌ Erro ao salvar: '+(e.message||e.code||'desconhecido'),'err');
+    console.error('sbSavePayment FAILED:',e);
   }
 }
 
@@ -2229,14 +2240,10 @@ setTimeout(fixBottomPadding,900);
 
 function cmo(){document.getElementById('mo').classList.remove('open');closeOwnerDrop();closeTagDrop();}
 
-// ── Override saveLocal/deletePayment/archivePayment para Supabase ──
+// saveLocal SEMPRE salva no localStorage (backup), mesmo logado
 async function saveLocal(){
-  if(currentUser)return; // Supabase cuida disso
   try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
 }
-
-// ── Override renderAll para chamar fixBottomPadding ──
-const _origRenderAll=renderAll;
 
 // ── INIT ──────────────────────────────────────────────────
 // Carrega config do localStorage ANTES de aplicar
