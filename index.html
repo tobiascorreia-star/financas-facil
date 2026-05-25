@@ -52,7 +52,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .nb.active{background:var(--surface2);color:var(--text);font-weight:600}
 
 /* BOTTOM NAV (mobile) */
-.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:6px 0 env(safe-area-inset-bottom);z-index:100}
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:6px 0 env(safe-area-inset-bottom);z-index:100;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.bottom-nav::-webkit-scrollbar{display:none}
+.bottom-nav .bnb-row{display:flex;min-width:max-content;padding:0 4px}
 .bnav{display:flex;justify-content:space-around}
 .bnb{background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 8px;font-size:10px;color:var(--text2);cursor:pointer;min-width:52px;border-radius:8px;transition:all .15s}
 .bnb.active{color:var(--green)}
@@ -601,7 +603,7 @@ datalist{}
 
 <!-- BOTTOM NAV (mobile) -->
 <div class="bottom-nav">
-  <div class="bnav">
+  <div class="bnav bnb-row">
     <button class="bnb active" onclick="showPage('dash')" id="bnav-dash">
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
       Painel
