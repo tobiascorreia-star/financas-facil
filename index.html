@@ -1221,39 +1221,23 @@ function renderAdminUsers(){
 
 async function changeUserRole(userId, role){
   const msgs={
-    approved:'✅ Usuário aprovado!',
+    approved:'✅ Usuário aprovado e liberado!',
     rejected:'❌ Acesso revogado.',
     suspended_provisional:'⏸️ Suspenso provisoriamente.',
     suspended_definitive:'🔒 Suspenso definitivamente.',
   };
 
-  // Tenta update direto primeiro
-  const{data,error}=await sb.from('profiles')
-    .update({role})
-    .eq('id',userId)
-    .select();
+  // Usa RPC com SECURITY DEFINER — bypassa RLS corretamente
+  const{error}=await sb.rpc('manage_user_role',{target_user_id:userId,new_role:role});
 
   if(error){
-    toast('❌ Erro ao atualizar: '+error.message,'err');
     console.error('changeUserRole error:',error);
+    toast('❌ Erro: '+error.message,'err');
     return;
   }
 
-  // Se update não encontrou a linha (data vazio), faz upsert
-  if(!data||data.length===0){
-    // Busca email do usuário para criar o perfil
-    const allProfs=adminAllUsers.find(u=>u.id===userId);
-    const{error:e2}=await sb.from('profiles').upsert({
-      id:userId,
-      email:allProfs?.email||'',
-      full_name:allProfs?.full_name||'',
-      role
-    },{onConflict:'id'});
-    if(e2){toast('❌ Erro ao criar perfil: '+e2.message,'err');return;}
-  }
-
   toast(msgs[role]||'Atualizado!');
-  loadAdminUsers();
+  setTimeout(()=>loadAdminUsers(),500);
 }
 
 'use strict';
