@@ -791,14 +791,22 @@ function localToDb(p){
 }
 
 async function loadDataFromSupabase(){
-  if(!currentUser)return;
-  const{data,error}=await sb.from('payments').select('*').eq('user_id',currentUser.id).order('created_at');
-  if(error){try{const r=localStorage.getItem('ff_pays');if(r)pays=JSON.parse(r);}catch(e){pays=[];}}
-  else{pays=data.map(dbToLocal);try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}}
-  try{const o=localStorage.getItem('ff_owners');if(o)owners=JSON.parse(o);}catch(e){}
-  try{const t=localStorage.getItem('ff_tags');if(t)allTags=JSON.parse(t);}catch(e){}
-  pays.forEach(p=>{if(p.owner&&!owners.includes(p.owner))owners.push(p.owner);(p.tags||[]).forEach(t=>{if(!allTags.includes(t))allTags.push(t);});});
-  renderAll();
+  if(!currentUser||_isLoadingDB)return;
+  _isLoadingDB=true;
+  try{
+    const{data,error}=await sb.from('payments').select('*').eq('user_id',currentUser.id).order('created_at');
+    if(error){try{const r=localStorage.getItem('ff_pays');if(r)pays=JSON.parse(r);}catch(e){pays=[];}}
+    else{
+      // Deduplica por ID para evitar duplicatas
+      const map=new Map();data.forEach(p=>{map.set(p.id,dbToLocal(p));});
+      pays=Array.from(map.values());
+      try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
+    }
+    try{const o=localStorage.getItem('ff_owners');if(o)owners=JSON.parse(o);}catch(e){}
+    try{const t=localStorage.getItem('ff_tags');if(t)allTags=JSON.parse(t);}catch(e){}
+    pays.forEach(p=>{if(p.owner&&!owners.includes(p.owner))owners.push(p.owner);(p.tags||[]).forEach(t=>{if(!allTags.includes(t))allTags.push(t);});});
+    renderAll();
+  }finally{_isLoadingDB=false;}
 }
 
 async function sbSavePayment(p){
@@ -826,11 +834,15 @@ async function sbDeletePayment(id){
   setSyncDot(error?'err':'ok');if(error)toast('❌ Erro ao excluir: '+error.message,'err');
 }
 
-let _selfUpdateUntil=0;
-function markSelfUpdate(){_selfUpdateUntil=Date.now()+2000;}
+let _selfUpdateUntil=0,_isLoadingDB=false;
+function markSelfUpdate(){_selfUpdateUntil=Date.now()+10000;}
 function initRealtime(){
   if(realtimeSub)sb.removeChannel(realtimeSub);
-  realtimeSub=sb.channel('payments-changes').on('postgres_changes',{event:'*',schema:'public',table:'payments',filter:`user_id=eq.${currentUser.id}`},()=>{if(Date.now()<_selfUpdateUntil)return;loadDataFromSupabase();}).subscribe();
+  realtimeSub=sb.channel('payments-changes').on('postgres_changes',{event:'*',schema:'public',table:'payments',filter:`user_id=eq.${currentUser.id}`},()=>{
+    if(Date.now()<_selfUpdateUntil)return;
+    if(_isLoadingDB)return;
+    loadDataFromSupabase();
+  }).subscribe();
 }
 
 async function loadAdminUsers(){
@@ -1008,28 +1020,33 @@ function pitem(p,mini=false){
   return`<div class="pi ${cls}" id="pi-${p.id}">${circle}<div class="pi-info"><div class="pi-name"><span class="${nameClass}">${p.name}</span>${wtag}${otag}</div><div class="pi-meta">${p.owner?`<span>👤 ${p.owner}</span>`:''}${p.category?`<span>${p.category}</span>`:''}${walletBadge}</div>${dateLine}${p.paidDate?`<div style="font-size:11px;color:var(--green-dark);margin-top:2px">✓ pago ${fmtD(p.paidDate)}</div>`:''}${tagsHtml}</div><div class="pi-right"><div class="pi-amt ${w||w2?'warn':st}">${curSym} ${Number(p.amount).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div><div style="display:flex;gap:3px;flex-wrap:wrap;justify-content:flex-end;margin-top:4px"><span class="badge ${st}">${slbl(st)}</span>${recb}</div>${!mini?`<div class="pi-acts"><button class="btn ico" onclick="archP(${p.id})" title="Arquivar">📁</button><button class="btn ico" onclick="editP(${p.id})" title="Editar">✏️</button><button class="btn ico" onclick="delP(${p.id})" title="Excluir">🗑️</button></div>`:''}</div></div>`;
 }
 
+let _qpLock=false;
 async function quickPay(id){
-  const p=pays.find(x=>x.id===id);if(!p)return;
-  if(p.status==='paid'){
-    p.status='pending';p.paidDate='';
+  if(_qpLock)return;_qpLock=true;
+  try{
+    const p=pays.find(x=>x.id===id);if(!p){_qpLock=false;return;}
+    if(p.status==='paid'){
+      p.status='pending';p.paidDate='';
+      try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
+      renderAll();toast(`↩ ${p.name} desmarcado.`);
+      if(currentUser)sbSavePayment(p);
+      return;
+    }
+    p.status='paid';p.paidDate=TODAY();
     try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
-    if(currentUser)await sbSavePayment(p);
-    renderAll();toast(`↩ ${p.name} desmarcado.`);return;
-  }
-  p.status='paid';p.paidDate=TODAY();
-  try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
-  if(currentUser)await sbSavePayment(p);
-  renderAll();toast(`✅ ${p.name} marcado como pago!`);
-  if(p.recur&&p.recur!=='none'&&p.due){
-    setTimeout(async()=>{
-      if(!confirm(`🔁 "${p.name}" é recorrente (${rlbl(p.recur)}).\nGerar próximo vencimento automaticamente?`))return;
-      const nextDue=calcNextDue(p.due,p.recur);
-      const clone={...p,id:Date.now(),status:'pending',paidDate:'',due:nextDue,archived:false};
-      pays.push(clone);try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
-      if(currentUser)await sbSavePayment(clone);
-      renderAll();toast(`📅 Próximo: ${p.name} em ${fmtD(nextDue)}`);
-    },400);
-  }
+    renderAll();toast(`✅ ${p.name} marcado como pago!`);
+    if(currentUser)sbSavePayment(p);
+    if(p.recur&&p.recur!=='none'&&p.due){
+      setTimeout(async()=>{
+        if(!confirm(`🔁 "${p.name}" é recorrente (${rlbl(p.recur)}).\nGerar próximo vencimento automaticamente?`))return;
+        const nextDue=calcNextDue(p.due,p.recur);
+        const clone={...p,id:Date.now(),status:'pending',paidDate:'',due:nextDue,archived:false};
+        pays.push(clone);try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
+        renderAll();toast(`📅 Próximo: ${p.name} em ${fmtD(nextDue)}`);
+        if(currentUser)sbSavePayment(clone);
+      },400);
+    }
+  }finally{setTimeout(()=>{_qpLock=false;},800);}
 }
 
 function calcNextDue(due,recur){
