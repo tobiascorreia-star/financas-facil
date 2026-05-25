@@ -748,7 +748,7 @@ function switchForm(f){
   document.getElementById('auth-err').style.display='none';
 }
 function togglePass(id,btn){const inp=document.getElementById(id);if(!inp)return;const show=inp.type==='password';inp.type=show?'text':'password';btn.textContent=show?'🙈':'👁';}
-async function loginGoogle(){const{error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.href}});if(error)showAuthErr(error.message);}
+async function loginGoogle(){const{error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin}});if(error)showAuthErr(error.message);}
 async function doLogin(){
   const email=document.getElementById('auth-email').value.trim();const pass=document.getElementById('auth-pass').value;
   if(!email||!pass){showAuthErr('Preencha e-mail e senha.');return;}
