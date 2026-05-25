@@ -1110,9 +1110,15 @@ function localToDb(p){
 async function loadDataFromSupabase(){
   if(!currentUser)return;
   const{data,error}=await sb.from('payments').select('*').eq('user_id',currentUser.id).order('created_at');
-  if(data)pays=data.map(dbToLocal);
-  else pays=[];
-  // Carrega owners das tags localmente
+  if(error){
+    console.error('loadDataFromSupabase error:',error);
+    // Fallback para localStorage se Supabase falhar
+    try{const r=localStorage.getItem('ff_pays');if(r)pays=JSON.parse(r).filter(p=>true);}catch(e){pays=[];}
+  }else{
+    pays=data.map(dbToLocal);
+    // Sincroniza localStorage com Supabase
+    try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
+  }
   try{const o=localStorage.getItem('ff_owners');if(o)owners=JSON.parse(o);}catch(e){}
   try{const t=localStorage.getItem('ff_tags');if(t)allTags=JSON.parse(t);}catch(e){}
   pays.forEach(p=>{
@@ -1579,35 +1585,33 @@ function pitem(p,mini=false){
   </div>`;
 }
 
-function quickPay(id){
+async function quickPay(id){
   const p=pays.find(x=>x.id===id);
   if(!p)return;
   if(p.status==='paid'){
     p.status='pending';p.paidDate='';
-    saveLocal();renderAll();
+    try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
+    if(currentUser)await sbSavePayment(p);
+    renderAll();
     toast(`↩ ${p.name} desmarcado.`);
     return;
   }
   p.status='paid';p.paidDate=TODAY();
-  if(currentUser)sbSavePayment(p);else saveLocal();
+  try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
+  if(currentUser)await sbSavePayment(p);
   renderAll();
   toast(`✅ ${p.name} marcado como pago!`);
 
   // ── AUTO-RECORRÊNCIA ──────────────────────────────────
   if(p.recur&&p.recur!=='none'&&p.due){
-    setTimeout(()=>{
+    setTimeout(async()=>{
       if(!confirm(`🔁 "${p.name}" é recorrente (${rlbl(p.recur)}).\nGerar próximo vencimento automaticamente?`))return;
       const nextDue=calcNextDue(p.due,p.recur);
-      const clone={
-        ...p,
-        id:Date.now(),
-        status:'pending',
-        paidDate:'',
-        due:nextDue,
-        archived:false
-      };
+      const clone={...p,id:Date.now(),status:'pending',paidDate:'',due:nextDue,archived:false};
       pays.push(clone);
-      saveLocal();renderAll();
+      try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
+      if(currentUser)await sbSavePayment(clone);
+      renderAll();
       toast(`📅 Próximo: ${p.name} em ${fmtD(nextDue)}`);
     },400);
   }
@@ -1796,14 +1800,29 @@ async function savePay(){
   };
   if(eid)pays=pays.map(x=>x.id===eid?p:x);else pays.push(p);
   if(owner&&!owners.includes(owner)){owners.push(owner);saveOwners();}
-  // salva tags globais
   tags.forEach(t=>{if(!allTags.includes(t))allTags.push(t);});
   try{localStorage.setItem('ff_tags',JSON.stringify(allTags));}catch(e){}
-  saveLocal();cmo();renderAll();toast(eid?'✏️ Atualizado!':'✅ Pagamento criado!');
+  // Sempre salva no localStorage como backup
+  try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
+  // Salva no Supabase se logado
+  if(currentUser)await sbSavePayment(p);
+  cmo();renderAll();toast(eid?'✏️ Atualizado!':'✅ Pagamento criado!');
 }
 function editP(id){const p=pays.find(x=>x.id===id);if(p)openModal(p);}
-function delP(id){if(!confirm('Excluir este pagamento?'))return;pays=pays.filter(x=>x.id!==id);if(currentUser)sbDeletePayment(id);else saveLocal();renderAll();toast('🗑️ Excluído.');}
-function archP(id){const p=pays.find(x=>x.id===id);if(!p)return;p.archived=true;p.archivedMonth=p.due?p.due.slice(0,7):TODAY().slice(0,7);if(currentUser)sbSavePayment(p);else saveLocal();renderAll();toast('📁 Arquivado!');}
+async function delP(id){
+  if(!confirm('Excluir este pagamento?'))return;
+  pays=pays.filter(x=>x.id!==id);
+  try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
+  if(currentUser)await sbDeletePayment(id);
+  renderAll();toast('🗑️ Excluído.');
+}
+async function archP(id){
+  const p=pays.find(x=>x.id===id);if(!p)return;
+  p.archived=true;p.archivedMonth=p.due?p.due.slice(0,7):TODAY().slice(0,7);
+  try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
+  if(currentUser)await sbSavePayment(p);
+  renderAll();toast('📁 Arquivado!');
+}
 
 function toast(msg,t=''){
   const el=document.getElementById('toast');el.textContent=msg;el.className='toast'+(t?' '+t:'');
