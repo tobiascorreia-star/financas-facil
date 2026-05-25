@@ -727,7 +727,10 @@ datalist{}
     <!-- LOGIN FORM -->
     <div id="form-login">
       <input class="auth-input" id="auth-email" type="email" placeholder="Seu e-mail">
-      <input class="auth-input" id="auth-pass" type="password" placeholder="Senha" onkeydown="if(event.key==='Enter')doLogin()">
+      <div style="position:relative">
+        <input class="auth-input" id="auth-pass" type="password" placeholder="Senha" onkeydown="if(event.key==='Enter')doLogin()" style="padding-right:42px">
+        <button onclick="togglePass('auth-pass',this)" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text2);font-size:18px;padding:0;line-height:1">👁</button>
+      </div>
       <button class="auth-btn primary" onclick="doLogin()">Entrar</button>
       <button class="auth-btn secondary" onclick="switchForm('register')">Criar conta</button>
     </div>
@@ -736,7 +739,10 @@ datalist{}
     <div id="form-register" style="display:none">
       <input class="auth-input" id="reg-name" type="text" placeholder="Seu nome completo">
       <input class="auth-input" id="reg-email" type="email" placeholder="Seu e-mail">
-      <input class="auth-input" id="reg-pass" type="password" placeholder="Senha (mín. 6 caracteres)" onkeydown="if(event.key==='Enter')doRegister()">
+      <div style="position:relative">
+        <input class="auth-input" id="reg-pass" type="password" placeholder="Senha (mín. 6 caracteres)" onkeydown="if(event.key==='Enter')doRegister()" style="padding-right:42px">
+        <button onclick="togglePass('reg-pass',this)" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text2);font-size:18px;padding:0;line-height:1">👁</button>
+      </div>
       <button class="auth-btn primary" onclick="doRegister()">Criar conta</button>
       <button class="auth-btn secondary" onclick="switchForm('login')">Já tenho conta</button>
     </div>
@@ -996,6 +1002,14 @@ function switchForm(f){
   document.getElementById('form-register').style.display=f==='register'?'':'none';
   document.getElementById('forgot-link').style.display=f==='login'?'':'none';
   document.getElementById('auth-err').style.display='none';
+}
+
+function togglePass(id,btn){
+  const inp=document.getElementById(id);
+  if(!inp)return;
+  const show=inp.type==='password';
+  inp.type=show?'text':'password';
+  btn.textContent=show?'🙈':'👁';
 }
 
 async function loginGoogle(){
