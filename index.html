@@ -1048,12 +1048,15 @@ async function quickPay(id){
       setTimeout(async()=>{
         if(!confirm(`🔁 "${p.name}" é recorrente (${rlbl(p.recur)}).\nGerar próximo vencimento?`))return;
         const nextDue=calcNextDue(p.due,p.recur);
+        // Evita duplicação: só cria se ainda não existe pagamento com mesmo nome e data
+        const jaExiste=pays.some(x=>x.name===p.name&&x.due===nextDue&&!x.archived&&x.status!=='paid');
+        if(jaExiste){toast(`ℹ️ Próximo vencimento já existe: ${fmtD(nextDue)}`);return;}
         const clone={...p,id:Date.now(),status:'pending',paidDate:'',due:nextDue,archived:false};
         pays.push(clone);
         try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
-        renderAll();                        // mostra novo item imediatamente
+        renderAll();
         toast(`📅 Próximo: ${p.name} em ${fmtD(nextDue)}`);
-        if(currentUser)await sbSavePayment(clone); // aguarda para garantir ID real do banco
+        if(currentUser)await sbSavePayment(clone);
       },500);
     }
   }finally{setTimeout(()=>{_qpLock=false;},1000);}
@@ -1073,7 +1076,7 @@ function renderPay(){
   if(curF==='paid')list=list.filter(p=>p.status==='paid');
   else if(curF==='pending')list=list.filter(p=>p.status==='pending'&&!isOD(p));
   else if(curF==='overdue')list=list.filter(p=>isOD(p)||p.status==='overdue');
-  else if(curF==='warn')list=list.filter(p=>isW(p)||isW2(p));
+  else if(curF==='warn')list=list.filter(p=>p.status!=='paid'&&!isOD(p)&&!!p.due);
   else if(curF==='rec')list=list.filter(p=>p.recur&&p.recur!=='none');
   if(wf)list=list.filter(p=>p.wallet===wf);
   list.sort((a,b)=>(a.due||'').localeCompare(b.due||''));
