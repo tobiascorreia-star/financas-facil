@@ -1625,14 +1625,14 @@ function pitem(p,mini=false){
   const recb=p.recur&&p.recur!=='none'?`<span class="badge rec">🔁 ${rlbl(p.recur)}</span>`:'';
   const nameClass=isPaid?'nm strike':'nm';
 
-  // Linha de data: mostra original → efetivo se ajustado
+  // Linha de data compacta
   let dateLine='';
   if(p.due){
     if(wasAdjusted&&!isPaid){
-      dateLine=`<span title="Vencimento original: ${fmtD(p.due)} (${adjustReason}) → prorrogado para primeiro dia útil">
-        📅 <s style="opacity:.5;font-size:10px">${fmtD(p.due)}</s> → ${fmtD(eff)}
-        <span style="font-size:10px;background:var(--blue-bg);color:var(--blue-dark);border-radius:20px;padding:1px 5px;border:1px solid var(--blue)">1° dia útil</span>
-        ${bdu!==null?`<span style="font-size:10px;color:var(--blue-dark)">(${bduLabel})</span>`:''}
+      // Mostra só a data efetiva com badge compacto na mesma linha
+      dateLine=`<span style="display:inline-flex;align-items:center;gap:4px;flex-wrap:nowrap" title="Original: ${fmtD(p.due)} (${adjustReason})">
+        📅 <s style="opacity:.45;font-size:10px">${fmtD(p.due)}</s>→<strong>${fmtD(eff)}</strong>
+        <span style="font-size:9px;background:var(--blue-bg);color:var(--blue-dark);border-radius:20px;padding:1px 6px;border:1px solid var(--blue);white-space:nowrap">1°útil${bdu===0?' · Hoje':''}</span>
       </span>`;
     }else{
       dateLine=`<span>📅 ${fmtD(p.due)}${!isPaid&&bdu!==null?` <span style="font-size:10px;color:var(--blue-dark)">(${bduLabel})</span>`:''}</span>`;
