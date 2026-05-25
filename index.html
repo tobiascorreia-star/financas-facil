@@ -878,20 +878,23 @@ async function handleSession(session){
 }
 
 // Tempo real: detecta aprovação instantaneamente
+let _pendingChannel=null;
 function startPendingListener(){
-  const ch=sb.channel('profile-watch-'+currentUser.id)
-    .on('postgres_changes',{
-      event:'UPDATE',schema:'public',table:'profiles',
-      filter:`id=eq.${currentUser.id}`
-    },payload=>{
-      const r=payload.new?.role;
-      sb.removeChannel(ch);
-      stopStatusPolling();
-      if(r==='approved')showApp(false);
-      else if(r==='rejected')showScreen('rejected');
-      else if(r==='suspended_provisional'||r==='suspended_definitive')showScreen('suspended');
-    })
-    .subscribe();
+  if(_pendingChannel){try{sb.removeChannel(_pendingChannel);}catch(e){} _pendingChannel=null;}
+  _pendingChannel=sb.channel('profile-watch-'+currentUser.id);
+  _pendingChannel.on('postgres_changes',{
+    event:'UPDATE',schema:'public',table:'profiles',
+    filter:`id=eq.${currentUser.id}`
+  },payload=>{
+    const r=payload.new?.role;
+    if(!r||r==='pending')return;
+    stopStatusPolling();
+    if(_pendingChannel){sb.removeChannel(_pendingChannel);_pendingChannel=null;}
+    if(r==='approved')showApp(false);
+    else if(r==='rejected')showScreen('rejected');
+    else if(r==='suspended_provisional'||r==='suspended_definitive')showScreen('suspended');
+  });
+  _pendingChannel.subscribe();
 }
 
 let _pollingTimer=null;
