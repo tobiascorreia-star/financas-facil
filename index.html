@@ -102,7 +102,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 /* FILTERS */
 .filters{display:flex;gap:6px;margin-bottom:.875rem;flex-wrap:wrap}
 .fc{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:4px 11px;font-size:11px;cursor:pointer;color:var(--text2);transition:all .15s}
-.fc.active{background:var(--green);border-color:var(--green-dark);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(29,158,117,.25)}
+.fc.active{background:var(--green);border-color:var(--green-dark);color:#fff;font-weight:700;box-shadow:0 3px 10px rgba(29,158,117,.4);transform:scale(1.05)}
 .si{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 11px;font-size:13px;color:var(--text);flex:1;min-width:130px}
 .si:focus{outline:none;border-color:var(--green)}
 
@@ -770,11 +770,14 @@ async function doForgotPassword(){
   showAuthErr('✅ Link de redefinição enviado para '+email,'green');
 }
 async function sbSignOut(){
-  stopStatusPolling();try{await sb.auth.signOut();}catch(e){}
+  stopStatusPolling();
+  // Mostra tela de login IMEDIATAMENTE, não aguarda o Supabase
   currentUser=null;currentProfile=null;pays=[];
   const app=document.getElementById('main-app');if(app)app.style.display='none';
   ['pending-screen','rejected-screen','suspended-screen'].forEach(id=>hide(id));
   document.getElementById('auth-overlay').style.display='flex';
+  // Faz signOut em background
+  try{await sb.auth.signOut();}catch(e){}
 }
 function logout(){sbSignOut();}
 function showAuthErr(msg,type=''){
@@ -1060,7 +1063,7 @@ async function quickPay(id){
         if(currentUser)await sbSavePayment(clone);
       },500);
     }
-  }finally{setTimeout(()=>{_qpLock=false;},1000);}
+  }finally{_qpLock=false;}
 }
 
 function calcNextDue(due,recur){
@@ -1151,8 +1154,8 @@ async function savePay(){
   tags.forEach(t=>{if(!allTags.includes(t))allTags.push(t);});
   try{localStorage.setItem('ff_tags',JSON.stringify(allTags));}catch(e){}
   try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
-  if(currentUser)await sbSavePayment(p);
   cmo();renderAll();toast(eid?'✏️ Atualizado!':'✅ Pagamento criado!');
+  if(currentUser)sbSavePayment(p); // fire-and-forget: não bloqueia o modal
 }
 function editP(id){const p=pays.find(x=>x.id===id);if(p)openModal(p);}
 async function delP(id){
