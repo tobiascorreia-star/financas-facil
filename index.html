@@ -1229,7 +1229,7 @@ async function changeUserRole(userId, role){
 
   // Tenta update direto primeiro
   const{data,error}=await sb.from('profiles')
-    .update({role, updated_at:new Date().toISOString()})
+    .update({role})
     .eq('id',userId)
     .select();
 
