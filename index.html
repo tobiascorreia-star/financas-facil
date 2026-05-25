@@ -1220,6 +1220,7 @@ async function loadDataFromSupabase(){
 
 async function sbSavePayment(p){
   if(!currentUser){console.warn('sbSavePayment: no currentUser');return;}
+  markSelfUpdate();
   setSyncDot('syncing');
   try{
     const dbp=localToDb(p);
@@ -1256,6 +1257,7 @@ function setSyncDot(state){
 
 async function sbDeletePayment(id){
   if(typeof id==='number'&&id>1000000000000)return;
+  markSelfUpdate();
   setSyncDot('syncing');
   const{error}=await sb.from('payments').delete().eq('id',id).eq('user_id',currentUser.id);
   setSyncDot(error?'err':'ok');
@@ -1263,11 +1265,22 @@ async function sbDeletePayment(id){
 }
 
 /* ── REALTIME ──────────────────────────────────────────── */
+let _selfUpdateUntil=0;
+
+function markSelfUpdate(){
+  // Marca que o usuário fez uma alteração - ignora realtime por 2 segundos
+  _selfUpdateUntil=Date.now()+2000;
+}
+
 function initRealtime(){
   if(realtimeSub)sb.removeChannel(realtimeSub);
   realtimeSub=sb.channel('payments-changes')
     .on('postgres_changes',{event:'*',schema:'public',table:'payments',filter:`user_id=eq.${currentUser.id}`},
-      ()=>loadDataFromSupabase())
+      ()=>{
+        // Ignora se a mudança veio do próprio usuário (evita race condition)
+        if(Date.now()<_selfUpdateUntil)return;
+        loadDataFromSupabase();
+      })
     .subscribe();
 }
 
