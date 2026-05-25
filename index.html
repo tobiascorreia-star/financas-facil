@@ -415,7 +415,6 @@ datalist{}
       <button class="nb" onclick="showPage('cfg')" id="nav-cfg">🔔 Avisos</button>
       <button class="nb" onclick="showPage('bkp')" id="nav-bkp">💾 Backup</button>
       <button class="nb" onclick="showPage('admin')" id="nav-admin" style="display:none">👑 Admin</button>
-      <button class="nb" onclick="showPage('adm')" id="nav-adm" style="display:none">👑 Admin</button>
     </nav>
   </div>
 </div>
@@ -473,22 +472,6 @@ datalist{}
   </div>
 
   <!-- ADMIN -->
-  <div class="page" id="page-admin">
-    <div class="sec-hdr">
-      <span class="sec-title">👑 Painel Administrativo</span>
-      <span style="font-size:11px;color:var(--text2)" id="admin-count"></span>
-    </div>
-    <div class="filters" style="margin-bottom:1rem">
-      <button class="fc active" onclick="adminFilter('all',this)">Todos</button>
-      <button class="fc" onclick="adminFilter('pending',this)">⏳ Pendentes</button>
-      <button class="fc" onclick="adminFilter('approved',this)">✅ Aprovados</button>
-      <button class="fc" onclick="adminFilter('suspended',this)">⏸️ Suspensos</button>
-      <button class="fc" onclick="adminFilter('rejected',this)">❌ Reprovados</button>
-    </div>
-    <div id="admin-users-list">
-      <div class="empty"><span class="empty-icon">⏳</span><p>Carregando usuários...</p></div>
-    </div>
-  </div>
   <div class="page" id="page-arch">
     <div class="sec-hdr"><span class="sec-title">📁 Arquivo</span><span style="font-size:12px;color:var(--text2)">Meses anteriores</span></div>
     <div id="arch"></div>
@@ -586,26 +569,69 @@ datalist{}
         <div><div class="srow-label">Bloquear com PIN</div><div class="srow-desc">Exige 4 dígitos ao abrir o app</div></div>
         <button class="toggle" id="t-pin" onclick="togglePin(this)"></button>
       </div>
-      <div id="pin-actions" style="display:none;margin-top:10px;display:none">
+      <div id="pin-actions" style="display:none;margin-top:10px">
         <button class="btn" style="width:100%;padding:9px;font-size:12px" onclick="startSetPin()">🔑 Alterar PIN</button>
         <button class="btn" style="width:100%;padding:9px;font-size:12px;margin-top:6px;color:var(--red-dark);border-color:var(--red)" onclick="clearPin()">🗑️ Remover PIN</button>
       </div>
     </div>
   </div>
 
+  <!-- BACKUP -->
+  <div class="page" id="page-bkp">
+    <div class="sec-hdr"><span class="sec-title">💾 Backup e Exportação</span></div>
+
+    <div class="scard">
+      <div class="stitle"><div class="stitle-icon">📊</div>Resumo dos dados</div>
+      <div id="bkp-stats" style="margin-top:8px"></div>
+    </div>
+
+    <div class="scard">
+      <div class="stitle"><div class="stitle-icon">📤</div>Exportar dados</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Baixe uma cópia completa dos seus dados em formato JSON (para backup) ou CSV (para Excel).</p>
+      <button class="btn pri" style="width:100%;padding:11px;font-size:13px;margin-bottom:8px" onclick="exportData()">📥 Exportar JSON (backup completo)</button>
+      <div id="bkp-export-info" style="display:none;font-size:11px;color:var(--green-dark);background:var(--green-bg);border-radius:7px;padding:8px;margin-bottom:8px"></div>
+      <button class="btn" style="width:100%;padding:11px;font-size:13px" onclick="exportCSV()">📊 Exportar CSV (Excel)</button>
+    </div>
+
+    <div class="scard">
+      <div class="stitle"><div class="stitle-icon">📥</div>Importar backup</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Restaure dados de um arquivo JSON exportado anteriormente.</p>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="fileSelected(this)">
+      <button class="btn" style="width:100%;padding:11px;font-size:13px" onclick="document.getElementById('import-file').click()">📁 Selecionar arquivo JSON</button>
+      <div id="import-preview" style="display:none;margin-top:12px;background:var(--surface2);border-radius:10px;padding:12px">
+        <div id="import-preview-info"></div>
+        <div style="display:flex;gap:6px;margin-top:10px">
+          <button class="btn pri" style="flex:1;padding:8px;font-size:12px" onclick="doImport('merge')">🔀 Mesclar</button>
+          <button class="btn" style="flex:1;padding:8px;font-size:12px;color:var(--red-dark);border-color:var(--red)" onclick="doImport('replace')">♻️ Substituir tudo</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="scard" style="border-color:var(--red)">
+      <div class="stitle"><div class="stitle-icon" style="background:var(--red-bg);color:var(--red-dark)">⚠️</div>Zona de perigo</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Apaga TODOS os seus pagamentos. Faça backup antes!</p>
+      <button class="btn" style="width:100%;padding:11px;font-size:13px;color:var(--red-dark);border-color:var(--red)" onclick="clearAllData()">🗑️ Apagar todos os dados</button>
+    </div>
+  </div>
+
   <!-- ADMIN -->
-  <div class="page" id="page-adm">
-    <div class="sec-hdr"><span class="sec-title">👑 Painel Admin</span><button class="btn" onclick="loadAdminUsers()">🔄 Atualizar</button></div>
-    <div class="admin-stats" id="admin-stats"></div>
-    <div style="font-size:13px;font-weight:700;margin-bottom:.75rem;color:var(--amber-dark)">⏳ Aguardando aprovação</div>
-    <div id="admin-pending-list"></div>
-    <div style="font-size:13px;font-weight:700;margin:.875rem 0 .75rem;color:var(--green-dark)">✅ Aprovados</div>
-    <div id="admin-approved-list"></div>
-    <div style="font-size:13px;font-weight:700;margin:.875rem 0 .75rem;color:var(--red-dark)">🚫 Reprovados</div>
-    <div id="admin-rejected-list"></div>
+  <div class="page" id="page-admin">
+    <div class="sec-hdr">
+      <span class="sec-title">👑 Painel Administrativo</span>
+      <span style="font-size:11px;color:var(--text2)" id="admin-count"></span>
+    </div>
+    <div class="filters" style="margin-bottom:1rem">
+      <button class="fc active" onclick="adminFilter('all',this)">Todos</button>
+      <button class="fc" onclick="adminFilter('pending',this)">⏳ Pendentes</button>
+      <button class="fc" onclick="adminFilter('approved',this)">✅ Aprovados</button>
+      <button class="fc" onclick="adminFilter('suspended',this)">⏸️ Suspensos</button>
+      <button class="fc" onclick="adminFilter('rejected',this)">❌ Reprovados</button>
+    </div>
+    <div id="admin-users-list">
+      <div class="empty"><span class="empty-icon">⏳</span><p>Carregando usuários...</p></div>
+    </div>
   </div>
-</div><!-- end content -->
-  </div>
+
 </div><!-- end content -->
 </div><!-- end main-app -->
 
@@ -2053,36 +2079,46 @@ function readImportFile(file){
   reader.readAsText(file);
 }
 
-function doImport(mode){
+async function doImport(mode){
   if(!pendingImport){toast('Nenhum arquivo carregado.','err');return;}
   const imported=pendingImport.payments;
   if(mode==='replace'){
     if(!confirm(`⚠️ Isso vai APAGAR ${pays.length} pagamento(s) atual(is) e substituir por ${imported.length} do arquivo.\n\nConfirmar?`))return;
-    pays=imported.map(p=>({...p,id:p.id||Date.now()+Math.random()}));
+    // Apaga do Supabase também
+    if(currentUser){
+      await sb.from('payments').delete().eq('user_id',currentUser.id);
+    }
+    pays=imported.map(p=>({...p,id:p.id||Date.now()+Math.floor(Math.random()*1000)}));
   }else{
-    // Mescla: evita duplicatas por id
     const existingIds=new Set(pays.map(p=>p.id));
     const novos=imported.filter(p=>!existingIds.has(p.id));
-    pays=[...pays,...novos.map(p=>({...p,id:p.id||Date.now()+Math.random()}))];
+    pays=[...pays,...novos.map(p=>({...p,id:p.id||Date.now()+Math.floor(Math.random()*1000)}))];
   }
-  // Importa owners também se existirem no backup
   if(pendingImport.data.owners){
     pendingImport.data.owners.forEach(o=>{if(o&&!owners.includes(o))owners.push(o);});
     saveOwners();
   }
-  saveLocal();
+  try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
+  // Salva todos no Supabase
+  if(currentUser){
+    for(const p of pays){await sbSavePayment(p);}
+  }
   pendingImport=null;
   document.getElementById('import-preview').style.display='none';
   document.getElementById('import-file').value='';
-  renderAll();
-  renderBkpStats();
+  renderAll();renderBkpStats();
   toast(mode==='replace'?`♻️ ${pays.length} pagamento(s) restaurado(s)!`:`🔀 Mesclado! Total: ${pays.length} pagamento(s).`);
 }
 
-function clearAllData(){
+async function clearAllData(){
   if(!confirm(`🗑️ Isso vai APAGAR permanentemente todos os ${pays.length} pagamento(s) e ${owners.length} responsável(is).\n\nEsta ação não pode ser desfeita. Confirmar?`))return;
+  // Apaga do Supabase
+  if(currentUser){
+    await sb.from('payments').delete().eq('user_id',currentUser.id);
+  }
   pays=[];owners=[];
-  saveLocal();saveOwners();
+  try{localStorage.setItem('ff_pays','[]');}catch(e){}
+  try{localStorage.setItem('ff_owners','[]');}catch(e){}
   renderAll();renderBkpStats();
   toast('🗑️ Todos os dados foram apagados.');
 }
