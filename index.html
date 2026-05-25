@@ -1024,29 +1024,39 @@ let _qpLock=false;
 async function quickPay(id){
   if(_qpLock)return;_qpLock=true;
   try{
-    const p=pays.find(x=>x.id===id);if(!p){_qpLock=false;return;}
+    const p=pays.find(x=>x.id===id);if(!p)return;
+
+    // ── DESMARCAR (pago → pendente) ────────────────────────
     if(p.status==='paid'){
       p.status='pending';p.paidDate='';
       try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
-      renderAll();toast(`↩ ${p.name} desmarcado.`);
-      if(currentUser)sbSavePayment(p);
+      renderAll();                          // visual imediato
+      toast(`↩ ${p.name} desmarcado.`);
+      if(currentUser)await sbSavePayment(p); // aguarda save para não haver corrida
       return;
     }
+
+    // ── MARCAR COMO PAGO ───────────────────────────────────
     p.status='paid';p.paidDate=TODAY();
     try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
-    renderAll();toast(`✅ ${p.name} marcado como pago!`);
-    if(currentUser)sbSavePayment(p);
+    renderAll();                            // visual imediato
+    toast(`✅ ${p.name} marcado como pago!`);
+    if(currentUser)await sbSavePayment(p); // aguarda save (grava paidDate corretamente)
+
+    // ── PRÓXIMO VENCIMENTO (recorrente) ───────────────────
     if(p.recur&&p.recur!=='none'&&p.due){
       setTimeout(async()=>{
-        if(!confirm(`🔁 "${p.name}" é recorrente (${rlbl(p.recur)}).\nGerar próximo vencimento automaticamente?`))return;
+        if(!confirm(`🔁 "${p.name}" é recorrente (${rlbl(p.recur)}).\nGerar próximo vencimento?`))return;
         const nextDue=calcNextDue(p.due,p.recur);
         const clone={...p,id:Date.now(),status:'pending',paidDate:'',due:nextDue,archived:false};
-        pays.push(clone);try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
-        renderAll();toast(`📅 Próximo: ${p.name} em ${fmtD(nextDue)}`);
-        if(currentUser)sbSavePayment(clone);
-      },400);
+        pays.push(clone);
+        try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
+        renderAll();                        // mostra novo item imediatamente
+        toast(`📅 Próximo: ${p.name} em ${fmtD(nextDue)}`);
+        if(currentUser)await sbSavePayment(clone); // aguarda para garantir ID real do banco
+      },500);
     }
-  }finally{setTimeout(()=>{_qpLock=false;},800);}
+  }finally{setTimeout(()=>{_qpLock=false;},1000);}
 }
 
 function calcNextDue(due,recur){
