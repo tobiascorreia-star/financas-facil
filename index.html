@@ -755,7 +755,8 @@ datalist{}
   <div class="status-box">
     <div class="status-icon">⏳</div>
     <div class="status-title">Aguardando aprovação</div>
-    <div class="status-desc">Sua conta foi criada com sucesso!<br>Aguarde o administrador aprovar seu acesso.<br><br>Você será notificado assim que liberado.</div>
+    <div class="status-desc">Sua conta foi criada com sucesso!<br>Aguarde o administrador aprovar seu acesso.<br><br><small style="color:var(--text3)">Verificando automaticamente a cada 15 segundos...</small></div>
+    <button class="btn pri" style="width:100%;padding:11px;margin-bottom:8px" onclick="checkStatusNow()">🔄 Verificar agora</button>
     <button class="btn" style="width:100%;padding:11px" onclick="sbSignOut()">Sair</button>
   </div>
 </div>
@@ -841,29 +842,73 @@ async function initAuth(){
 
 async function handleSession(session){
   currentUser=session.user;
-  const{data:profile}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();
+
+  // Busca perfil — se não existir, cria
+  let{data:profile,error}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();
+
+  if(!profile){
+    // Perfil não existe — tenta criar (fallback para trigger falho)
+    const{data:newProfile}=await sb.from('profiles').upsert({
+      id:currentUser.id,
+      email:currentUser.email,
+      full_name:currentUser.user_metadata?.full_name||currentUser.email.split('@')[0],
+      role:currentUser.email===ADMIN_EMAIL?'approved':'pending'
+    },{onConflict:'id'}).select().single();
+    profile=newProfile;
+  }
+
   currentProfile=profile;
+
+  // Admin sempre tem acesso total
   if(currentUser.email===ADMIN_EMAIL){showApp(true);return;}
+
   const role=profile?.role||'pending';
-  if(role==='approved')showApp(false);
-  else if(role==='rejected')showScreen('rejected');
-  else if(role==='suspended_provisional'||role==='suspended_definitive')showScreen('suspended');
-  else{showScreen('pending');startPendingListener();}
+  if(role==='approved'){
+    showApp(false);
+  }else if(role==='rejected'){
+    showScreen('rejected');
+  }else if(role==='suspended_provisional'||role==='suspended_definitive'){
+    showScreen('suspended');
+  }else{
+    // Pendente — inicia listener em tempo real + polling como fallback
+    showScreen('pending');
+    startPendingListener();
+    startStatusPolling();
+  }
 }
 
-// Escuta em tempo real mudança de role — atualiza tela do usuário automaticamente
+// Tempo real: detecta aprovação instantaneamente
 function startPendingListener(){
   const ch=sb.channel('profile-watch-'+currentUser.id)
-    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'profiles',filter:`id=eq.${currentUser.id}`},
-      payload=>{
-        const r=payload.new?.role;
-        sb.removeChannel(ch);
-        if(r==='approved')showApp(false);
-        else if(r==='rejected')showScreen('rejected');
-        else if(r==='suspended_provisional'||r==='suspended_definitive')showScreen('suspended');
-      })
+    .on('postgres_changes',{
+      event:'UPDATE',schema:'public',table:'profiles',
+      filter:`id=eq.${currentUser.id}`
+    },payload=>{
+      const r=payload.new?.role;
+      sb.removeChannel(ch);
+      stopStatusPolling();
+      if(r==='approved')showApp(false);
+      else if(r==='rejected')showScreen('rejected');
+      else if(r==='suspended_provisional'||r==='suspended_definitive')showScreen('suspended');
+    })
     .subscribe();
 }
+
+// Polling: verifica status a cada 15s (backup para caso o realtime falhe)
+let _pollingTimer=null;
+function startStatusPolling(){
+  stopStatusPolling();
+  _pollingTimer=setInterval(async()=>{
+    if(!currentUser)return stopStatusPolling();
+    const{data:p}=await sb.from('profiles').select('role').eq('id',currentUser.id).single();
+    if(!p)return;
+    const r=p.role;
+    if(r==='approved'){stopStatusPolling();showApp(false);}
+    else if(r==='rejected'){stopStatusPolling();showScreen('rejected');}
+    else if(r==='suspended_provisional'||r==='suspended_definitive'){stopStatusPolling();showScreen('suspended');}
+  },15000);
+}
+function stopStatusPolling(){if(_pollingTimer){clearInterval(_pollingTimer);_pollingTimer=null;}}
 
 function showAuthScreen(){
   const app=document.getElementById('main-app');
@@ -958,20 +1003,29 @@ async function doForgotPassword(){
 }
 
 async function sbSignOut(){
+  stopStatusPolling();
   try{await sb.auth.signOut();}catch(e){}
-  currentUser=null;currentProfile=null;
-  pays=[];
-  // Esconde o app e mostra o login
+  currentUser=null;currentProfile=null;pays=[];
   const app=document.getElementById('main-app');
   if(app)app.style.display='none';
+  ['pending-screen','rejected-screen','suspended-screen'].forEach(id=>hide(id));
   document.getElementById('auth-overlay').style.display='flex';
-  hide('pending-screen');hide('rejected-screen');
-  // Limpa user bar
   const bar=document.getElementById('user-bar');
   if(bar)bar.innerHTML='';
 }
 
 function logout(){sbSignOut();}
+
+async function checkStatusNow(){
+  if(!currentUser)return;
+  const{data:p}=await sb.from('profiles').select('role').eq('id',currentUser.id).single();
+  if(!p){toast('Perfil não encontrado.','err');return;}
+  const r=p.role;
+  if(r==='approved'){stopStatusPolling();showApp(false);}
+  else if(r==='rejected'){stopStatusPolling();showScreen('rejected');}
+  else if(r==='suspended_provisional'||r==='suspended_definitive'){stopStatusPolling();showScreen('suspended');}
+  else toast('⏳ Ainda aguardando aprovação...');
+}
 
 function showAuthErr(msg,type=''){
   const el=document.getElementById('auth-err');
