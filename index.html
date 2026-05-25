@@ -630,6 +630,11 @@ datalist{}
       <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       Backup
     </button>
+    <button class="bnb" onclick="showPage('admin')" id="bnav-admin" style="display:none;position:relative">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+      Admin
+      <span id="admin-badge" style="display:none;position:absolute;top:4px;right:6px;background:#E24B4A;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:700;align-items:center;justify-content:center;line-height:16px"></span>
+    </button>
   </div>
 </div>
 
@@ -978,13 +983,62 @@ function showApp(isAdmin=false){
   updateUserBar();
   // Carrega dados do Supabase
   loadDataFromSupabase();
-  // Inicia realtime
+  // Inicia realtime de pagamentos
   initRealtime();
+  // Inicia listener de novos cadastros (só admin)
+  if(isAdmin)initAdminNotifier();
   // Init PIN
   initPin();
   // Configura notificações
   updateBell();
   if(C.onopen)setTimeout(()=>doCheck(false),1500);
+}
+
+/* ── NOTIFICAÇÃO ADMIN: novos cadastros ───────────────── */
+let _adminNotifChannel=null;
+let _pendingCount=0;
+
+async function initAdminNotifier(){
+  // Busca quantidade atual de pendentes para comparar
+  const{data}=await sb.rpc('get_all_profiles');
+  _pendingCount=(data||[]).filter(u=>u.role==='pending').length;
+  updateAdminBadge(_pendingCount);
+
+  // Remove canal anterior se existir
+  if(_adminNotifChannel){try{sb.removeChannel(_adminNotifChannel);}catch(e){}}
+
+  // Escuta novos INSERTs na tabela profiles
+  _adminNotifChannel=sb.channel('admin-new-users');
+  _adminNotifChannel.on('postgres_changes',{
+    event:'INSERT',schema:'public',table:'profiles'
+  },payload=>{
+    const p=payload.new;
+    if(!p||p.email===ADMIN_EMAIL)return;
+    _pendingCount++;
+    updateAdminBadge(_pendingCount);
+    // Notificação push
+    pushNotif(
+      '👤 Novo cadastro pendente!',
+      `${p.full_name||p.email} acabou de se cadastrar e aguarda aprovação.`,
+      'novo-cadastro'
+    );
+    // Toast no app
+    toast(`👤 Novo usuário: ${p.email}`);
+    // Atualiza lista admin se estiver na página
+    if(document.getElementById('page-admin')?.classList.contains('active'))loadAdminUsers();
+  });
+  _adminNotifChannel.subscribe();
+}
+
+function updateAdminBadge(count){
+  // Atualiza badge no botão admin do nav
+  const navBtn=document.getElementById('nav-admin');
+  const bnavBtn=document.getElementById('bnav-admin');
+  const label=count>0?` 👑 Admin (${count})`:'👑 Admin';
+  if(navBtn)navBtn.textContent=label;
+  // Badge visual no bottom nav
+  const badge=document.getElementById('admin-badge');
+  if(badge){badge.textContent=count>0?count:'';badge.style.display=count>0?'flex':'none';}
 }
 function hide(id,toNone=true){const el=document.getElementById(id);if(el)el.style.display=toNone?'none':'';}
 
@@ -1271,6 +1325,8 @@ async function changeUserRole(userId, role){
   }
 
   toast(msgs[role]||'Atualizado!');
+  if(role!=='pending')_pendingCount=Math.max(0,_pendingCount-1);
+  updateAdminBadge(_pendingCount);
   setTimeout(()=>loadAdminUsers(),500);
 }
 
