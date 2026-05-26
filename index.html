@@ -841,8 +841,15 @@ function showApp(isAdmin=false){
   if(isAdmin)initAdminNotifier();
   initPin();
   updateBell();
-  // Inicia Web Push depois que permissões são verificadas
-  setTimeout(()=>initWebPush(isAdmin),1000);
+  // Inicia Web Push — salva/atualiza subscription sempre que abre o app
+  setTimeout(async()=>{
+    await initWebPush(isAdmin);
+    if(isAdmin){
+      // Confirma no console que a subscription foi salva
+      const{data}=await sb.from('push_subscriptions').select('id,is_admin,updated_at').eq('user_id',currentUser.id);
+      console.log('[WebPush] Subscriptions salvas:',data);
+    }
+  },1500);
   if(C.onopen)setTimeout(()=>doCheck(false),1500);
 }
 
@@ -1107,13 +1114,17 @@ function updateBell(){
 }
 async function reqNotif(){
   if(!('Notification' in window)){toast('Navegador sem suporte a notificações.','err');return;}
-  if(Notification.permission==='granted'){showPage('cfg');return;}
+  const isAdm=currentUser?.email===ADMIN_EMAIL;
+  if(Notification.permission==='granted'){
+    // Já tem permissão — garante que a subscription está salva e vai para cfg
+    initWebPush(isAdm);
+    showPage('cfg');
+    return;
+  }
   const p=await Notification.requestPermission();updateBell();
   if(p==='granted'){
     toast('🔔 Notificações ativadas!');
     doCheck(true);
-    // Salva Web Push subscription ao ativar notificações
-    const isAdm=currentUser?.email===ADMIN_EMAIL;
     initWebPush(isAdm);
   }else toast('Permissão negada. Desbloqueie nas configurações do navegador.','err');
 }
