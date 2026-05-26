@@ -77,6 +77,13 @@ self.addEventListener('fetch', e => {
   );
 });
 
+// ── MENSAGEM DO APP (ex: pedir para ativar imediatamente) ────
+self.addEventListener('message', e => {
+  if (e.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting(); // ativa o novo SW imediatamente
+  }
+});
+
 // ── WEB PUSH ──────────────────────────────────────────────
 self.addEventListener('push', e => {
   if (!e.data) return;
