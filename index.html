@@ -24,8 +24,9 @@
   --blue:#378ADD;--blue-bg:#E6F1FB;--blue-dark:#185FA5;
   --radius:10px;--radius-lg:14px;
 }
+/* Tema escuro via media query (modo Sistema) */
 @media(prefers-color-scheme:dark){
-  :root{
+  :root:not([data-theme='light']){
     --bg:#1a1a18;--surface:#242422;--surface2:#2e2e2b;--border:#3a3a36;--border2:#4a4a46;
     --text:#f0f0ec;--text2:#a0a09a;--text3:#6b6b66;
     --green-bg:#0a3326;--green-dark:#5DCAA5;
@@ -33,6 +34,15 @@
     --red-bg:#3a1010;--red-dark:#F09595;
     --blue-bg:#0a1e3a;--blue-dark:#85B7EB;
   }
+}
+/* Tema escuro forçado */
+:root[data-theme='dark']{
+  --bg:#1a1a18;--surface:#242422;--surface2:#2e2e2b;--border:#3a3a36;--border2:#4a4a46;
+  --text:#f0f0ec;--text2:#a0a09a;--text3:#6b6b66;
+  --green-bg:#0a3326;--green-dark:#5DCAA5;
+  --amber-bg:#3a2a0a;--amber-dark:#EF9F27;
+  --red-bg:#3a1010;--red-dark:#F09595;
+  --blue-bg:#0a1e3a;--blue-dark:#85B7EB;
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
 
@@ -311,7 +321,14 @@ datalist{}
 .tag-opt{padding:8px 12px;font-size:12px;cursor:pointer;color:var(--text)}
 .tag-opt:hover{background:var(--surface2)}
 .wallet-badge{font-size:10px;background:color-mix(in srgb,#7F77DD 15%,transparent);color:#4a44aa;border:1px solid #7F77DD;border-radius:20px;padding:2px 7px;font-weight:600}
-@media(prefers-color-scheme:dark){.wallet-badge{color:#a8a4f0}}
+@media(prefers-color-scheme:dark){:root:not([data-theme='light']) .wallet-badge{color:#a8a4f0}}
+:root[data-theme='dark'] .wallet-badge{color:#a8a4f0}
+
+/* BOTÃO DE TEMA */
+.theme-btn{background:none;border:1.5px solid var(--border);border-radius:8px;padding:4px 2px;cursor:pointer;display:flex;align-items:center;gap:1px;height:28px}
+.theme-opt{background:none;border:none;padding:3px 7px;border-radius:6px;font-size:13px;cursor:pointer;transition:all .15s;line-height:1}
+.theme-opt.active{background:var(--green);box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.theme-opt:hover:not(.active){background:var(--surface2)}
 .cur-badge{font-size:11px;font-weight:700;opacity:.7;margin-left:2px}
 .month-bars{display:flex;align-items:flex-end;gap:6px;height:100px;margin:8px 0}
 .month-bar-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1}
@@ -333,6 +350,11 @@ datalist{}
 <div class="topbar">
   <div class="topbar-logo">💰 <span>Finanças</span>Fácil <span class="sync-dot ok" id="sync-dot" title="Sincronizado"></span></div>
   <div style="display:flex;align-items:center;gap:6px">
+    <div class="theme-btn" title="Tema">
+      <button class="theme-opt active" id="theme-system" onclick="setTheme('system')" title="Sistema">💻</button>
+      <button class="theme-opt" id="theme-light" onclick="setTheme('light')" title="Claro">☀️</button>
+      <button class="theme-opt" id="theme-dark" onclick="setTheme('dark')" title="Escuro">🌙</button>
+    </div>
     <button class="bell-btn" id="bell-btn" onclick="reqNotif()">🔔 <span id="bell-lbl">Alertas</span></button>
     <button class="bell-btn" onclick="logout()" title="Sair" style="border-color:var(--border)">👤 <span id="user-name-btn">Sair</span></button>
     <nav class="nav desktop-nav" id="desktop-nav">
@@ -1301,6 +1323,23 @@ async function saveLocal(){try{localStorage.setItem('ff_pays',JSON.stringify(pay
 try{const c=localStorage.getItem('ff_cfg');if(c)C={...C,...JSON.parse(c)};}catch(e){}
 try{const o=localStorage.getItem('ff_owners');if(o)owners=JSON.parse(o);}catch(e){}
 try{const t=localStorage.getItem('ff_tags');if(t)allTags=JSON.parse(t);}catch(e){}
+// ── TEMA ───────────────────────────────────────────────────
+function setTheme(t){
+  const root=document.documentElement;
+  localStorage.setItem('ff_theme',t);
+  if(t==='dark')root.setAttribute('data-theme','dark');
+  else if(t==='light')root.setAttribute('data-theme','light');
+  else root.removeAttribute('data-theme');
+  ['system','light','dark'].forEach(id=>{
+    const el=document.getElementById('theme-'+id);
+    if(el)el.classList.toggle('active',id===t);
+  });
+}
+function initTheme(){
+  const saved=localStorage.getItem('ff_theme')||'system';
+  setTheme(saved);
+}
+initTheme();
 applyC();
 updateBell();
 
