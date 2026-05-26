@@ -1115,11 +1115,33 @@ async function reqNotif(){
     initWebPush(isAdm);
   }else toast('Permissão negada. Desbloqueie nas configurações do navegador.','err');
 }
-function push(title,body,tag='p'){
+const NOTIF_ICON='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%231D9E75"/><text y="44" x="32" text-anchor="middle" font-size="38">💰</text></svg>';
+
+async function push(title,body,tag='p'){
   if(!('Notification' in window)||Notification.permission!=='granted')return;
-  try{new Notification(title,{body,tag,icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="%231D9E75"/><text y="44" x="32" text-anchor="middle" font-size="38">💰</text></svg>'});}catch(e){}
+  // Tenta via Service Worker primeiro (funciona em mobile, PWA, iOS)
+  if('serviceWorker' in navigator){
+    try{
+      const reg=await navigator.serviceWorker.getRegistration('./');
+      if(reg){
+        await reg.showNotification(title,{
+          body,tag,icon:NOTIF_ICON,badge:NOTIF_ICON,
+          vibrate:[200,100,200],
+          data:{url:'./'}
+        });
+        return;
+      }
+    }catch(e){console.warn('SW notification falhou:',e);}
+  }
+  // Fallback: Notification API direta (desktop)
+  try{new Notification(title,{body,tag,icon:NOTIF_ICON});}catch(e){console.warn('Notification API falhou:',e);}
 }
-function testNotif(){push('FinançasFácil ✅','Notificações funcionando! Você receberá avisos de vencimento.','test');toast('📤 Notificação de teste enviada!');}
+async function testNotif(){
+  if(!('Notification' in window)){toast('❌ Navegador não suporta notificações.','err');return;}
+  if(Notification.permission!=='granted'){toast('❌ Permissão negada. Ative os alertas primeiro.','err');return;}
+  await push('FinançasFácil ✅','Notificações funcionando! Você receberá avisos de vencimento.','test');
+  toast('📤 Notificação de teste enviada!');
+}
 function doCheck(force=false){
   if(!('Notification' in window)||Notification.permission!=='granted'){if(force)toast('Ative as notificações primeiro!','err');return;}
   const active=pays.filter(p=>!p.archived&&p.status!=='paid');
@@ -1127,8 +1149,12 @@ function doCheck(force=false){
   if(od.length){const ns=od.slice(0,3).map(p=>{const eff=effectiveDue(p.due);return eff!==p.due?`${p.name}(→${fmtD(eff)})`:p.name;}).join(', ')+(od.length>3?'...':'');push(`🔴 ${od.length} pagamento(s) ATRASADO(S)`,`${ns}\nTotal: ${fmt(od.reduce((a,p)=>a+Number(p.amount),0))}`,'od');}
   if(w.length){const ns=w.slice(0,3).map(p=>`${p.name}(${diffBD(p.due)===0?'hoje':diffBD(p.due)+'du'})`).join(', ');push(`⚠️ Vence(m) em até ${C.d1} dia(s) útil(eis)`,ns,'w');}
   if(w2.length){const ns=w2.slice(0,3).map(p=>`${p.name}(${diffBD(p.due)}du)`).join(', ');push(`📅 Aviso antecipado: ${w2.length} pag.`,`Vencem em até ${C.d2v} dias úteis: ${ns}`,'w2');}
-  if(force&&!od.length&&!w.length&&!w2.length)push('FinançasFácil ✅','Tudo em dia! Nenhum vencimento próximo.','ok');
-  if(force)toast('🔍 Verificação concluída!');
+  if(force&&!od.length&&!w.length&&!w2.length){
+    push('FinançasFácil ✅','Tudo em dia! Nenhum vencimento próximo.','ok');
+    toast('✅ Tudo em dia! Nenhum vencimento próximo.');
+  }else if(force){
+    toast('🔍 Verificação concluída! Notificação enviada.');
+  }
 }
 function checkNow(){doCheck(true);}
 function alerts(){const ac=pays.filter(p=>!p.archived);return{od:ac.filter(p=>isOD(p)),w:ac.filter(p=>isW(p)),w2:C.d2?ac.filter(p=>isW2(p)):[]};}
