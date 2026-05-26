@@ -1119,28 +1119,42 @@ const NOTIF_ICON='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" vie
 
 async function push(title,body,tag='p'){
   if(!('Notification' in window)||Notification.permission!=='granted')return;
-  // Tenta via Service Worker primeiro (funciona em mobile, PWA, iOS)
+
+  const opts={body,tag,icon:NOTIF_ICON,badge:NOTIF_ICON,vibrate:[200,100,200],data:{url:'./'}};
+  let sent=false;
+
+  // 1. Tenta Service Worker (mobile, PWA, iOS, Android)
   if('serviceWorker' in navigator){
     try{
-      const reg=await navigator.serviceWorker.getRegistration('./');
-      if(reg){
-        await reg.showNotification(title,{
-          body,tag,icon:NOTIF_ICON,badge:NOTIF_ICON,
-          vibrate:[200,100,200],
-          data:{url:'./'}
-        });
-        return;
+      // Usa Promise.race com timeout — não trava se SW não responder
+      const regPromise=navigator.serviceWorker.getRegistration('./');
+      const reg=await Promise.race([regPromise,new Promise(r=>setTimeout(()=>r(null),1500))]);
+      if(reg&&reg.active){
+        await reg.showNotification(title,opts);
+        sent=true;
       }
-    }catch(e){console.warn('SW notification falhou:',e);}
+    }catch(e){console.warn('[Push] SW falhou:',e);}
   }
-  // Fallback: Notification API direta (desktop)
-  try{new Notification(title,{body,tag,icon:NOTIF_ICON});}catch(e){console.warn('Notification API falhou:',e);}
+
+  // 2. Fallback: Notification API direta (desktop Chrome/Firefox/Edge)
+  if(!sent){
+    try{
+      new Notification(title,{body,tag,icon:NOTIF_ICON});
+      sent=true;
+    }catch(e){console.warn('[Push] Notification API falhou:',e);}
+  }
+
+  if(!sent)console.warn('[Push] Nenhum método funcionou. Verifique permissões do SO.');
 }
 async function testNotif(){
   if(!('Notification' in window)){toast('❌ Navegador não suporta notificações.','err');return;}
-  if(Notification.permission!=='granted'){toast('❌ Permissão negada. Ative os alertas primeiro.','err');return;}
-  await push('FinançasFácil ✅','Notificações funcionando! Você receberá avisos de vencimento.','test');
-  toast('📤 Notificação de teste enviada!');
+  if(Notification.permission==='denied'){toast('❌ Bloqueado! Clique no 🔒 na barra de endereço → Permitir.','err');return;}
+  if(Notification.permission!=='granted'){
+    toast('⚠️ Clique em "Alertas ativos" para ativar primeiro.','err');return;
+  }
+  toast('📤 Enviando notificação de teste...');
+  await push('FinançasFácil ✅','Notificações funcionando! Você receberá avisos de vencimento.','test-'+Date.now());
+  setTimeout(()=>toast('✅ Se não recebeu: verifique o Centro de Notificações do Windows/Mac.'),1500);
 }
 function doCheck(force=false){
   if(!('Notification' in window)||Notification.permission!=='granted'){if(force)toast('Ative as notificações primeiro!','err');return;}
