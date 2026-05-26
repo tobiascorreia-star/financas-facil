@@ -1,57 +1,98 @@
-// FinançasFácil — Service Worker v2.0 (Web Push + Offline)
-const CACHE_NAME = 'financas-facil-v2';
-const STATIC = ['./','./index.html','./manifest.json','./icon.svg'];
+// FinançasFácil — Service Worker v3.0
+// ESTRATÉGIA: Network-first para HTML (sempre versão mais recente)
+//             Cache-first para assets estáticos (ícones, manifest)
+const CACHE_NAME = 'financas-facil-v3';
+const STATIC_ASSETS = ['./manifest.json', './icon.svg'];
 
 // ── INSTALAÇÃO ────────────────────────────────────────────
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then(c => c.addAll(STATIC)).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME)
+      .then(c => c.addAll(STATIC_ASSETS))
+      .then(() => self.skipWaiting()) // ativa imediatamente sem esperar fechar abas
   );
 });
 
-// ── ATIVAÇÃO ──────────────────────────────────────────────
+// ── ATIVAÇÃO — limpa caches antigos ───────────────────────
 self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    caches.keys()
+      .then(keys => Promise.all(
+        keys.filter(k => k !== CACHE_NAME).map(k => {
+          console.log('[SW] Removendo cache antigo:', k);
+          return caches.delete(k);
+        })
+      ))
+      .then(() => self.clients.claim()) // assume controle de todas as abas
   );
 });
 
-// ── FETCH (cache-first para assets estáticos) ─────────────
+// ── FETCH ─────────────────────────────────────────────────
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
-  if (e.request.url.includes('supabase.co')) return; // não cacheia API
+
+  const url = e.request.url;
+
+  // Nunca cacheia chamadas ao Supabase
+  if (url.includes('supabase.co')) return;
+
+  // ── HTML: SEMPRE network-first ────────────────────────
+  // index.html nunca vem do cache — garante versão mais recente
+  if (e.request.destination === 'document' ||
+      url.endsWith('/') ||
+      url.endsWith('/index.html') ||
+      url.endsWith('.html')) {
+    e.respondWith(
+      fetch(e.request)
+        .then(response => {
+          // Salva no cache só se veio do servidor com sucesso
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+          }
+          return response;
+        })
+        .catch(() => {
+          // Offline: usa cache como fallback
+          return caches.match(e.request)
+            .then(cached => cached || caches.match('./'));
+        })
+    );
+    return;
+  }
+
+  // ── Outros assets: cache-first (manifest, icon) ───────
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
+    caches.match(e.request)
+      .then(cached => {
+        if (cached) return cached;
+        return fetch(e.request).then(response => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+          }
+          return response;
+        });
+      })
   );
 });
 
-// ── WEB PUSH — recebe notificação mesmo com app fechado ───
+// ── WEB PUSH ──────────────────────────────────────────────
 self.addEventListener('push', e => {
   if (!e.data) return;
-
   let data = {};
   try { data = e.data.json(); } catch { data = { title: e.data.text() }; }
 
-  const title   = data.title   || 'FinançasFácil';
-  const body    = data.body    || '';
-  const tag     = data.tag     || 'financas-push';
-  const icon    = data.icon    || './icon.svg';
-  const badge   = data.badge   || './icon.svg';
-  const url     = data.url     || './';
-  const actions = data.actions || [];
-
   e.waitUntil(
-    self.registration.showNotification(title, {
-      body,
-      tag,
-      icon,
-      badge,
-      data: { url },
-      actions,
-      requireInteraction: data.requireInteraction || false,
-      vibrate: [200, 100, 200],
+    self.registration.showNotification(data.title || 'FinançasFácil', {
+      body:                data.body    || '',
+      tag:                 data.tag     || 'financas-push',
+      icon:                data.icon    || './icon.svg',
+      badge:               data.badge   || './icon.svg',
+      data:                { url: data.url || './' },
+      actions:             data.actions || [],
+      requireInteraction:  data.requireInteraction || false,
+      vibrate:             [200, 100, 200],
     })
   );
 });
@@ -60,28 +101,27 @@ self.addEventListener('push', e => {
 self.addEventListener('notificationclick', e => {
   e.notification.close();
   const url = e.notification.data?.url || './';
-
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(wins => {
-      // Se o app já está aberto, foca nele
       const win = wins.find(w => w.url.includes(self.location.origin));
       if (win) return win.focus();
-      // Senão abre uma nova aba
       return clients.openWindow(url);
     })
   );
 });
 
-// ── PUSH SUBSCRIPTION CHANGE (renovação automática) ───────
+// ── PUSH SUBSCRIPTION CHANGE ──────────────────────────────
 self.addEventListener('pushsubscriptionchange', e => {
   e.waitUntil(
     self.registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: e.oldSubscription.options.applicationServerKey
     }).then(sub => {
-      // Notifica o app para salvar nova subscription
       return self.clients.matchAll().then(clients => {
-        clients.forEach(c => c.postMessage({ type: 'SUBSCRIPTION_RENEWED', subscription: sub.toJSON() }));
+        clients.forEach(c => c.postMessage({
+          type: 'SUBSCRIPTION_RENEWED',
+          subscription: sub.toJSON()
+        }));
       });
     })
   );
