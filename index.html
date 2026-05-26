@@ -70,10 +70,96 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .bnb.active{color:var(--green)}
 .bnb svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 @media(max-width:600px){
+  /* ── TOPBAR MOBILE ─────────────────────────────── */
   .desktop-nav{display:none}
   .bottom-nav{display:block}
-  .content{padding-bottom:calc(220px + env(safe-area-inset-bottom, 24px))}
-  .topbar{height:48px}
+  .topbar{height:52px;padding:0 .75rem}
+  .topbar-logo{font-size:14px;gap:6px}
+
+  /* Oculta texto dos botões do topbar, mantém só ícones */
+  .bell-btn span{display:none}
+  .bell-btn{padding:5px 8px;font-size:15px;gap:0}
+
+  /* Tema: só ícone ativo visível no mobile */
+  .theme-btn{border:1.5px solid var(--border);padding:3px}
+  .theme-opt{padding:3px 5px;font-size:14px}
+
+  /* ── CONTENT ────────────────────────────────────── */
+  .content{padding:.75rem;padding-bottom:calc(90px + env(safe-area-inset-bottom, 24px))}
+
+  /* ── METRICS ────────────────────────────────────── */
+  .mg{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem}
+  .mc{padding:.75rem .875rem}
+  .mc-label{font-size:10px}
+  .mc-val{font-size:18px}
+
+  /* ── ALERTAS ────────────────────────────────────── */
+  .alert-box{padding:.75rem;gap:8px;font-size:12px}
+  .alert-title{font-size:11px}
+  .alert-item{font-size:10px}
+
+  /* ── FILTROS ────────────────────────────────────── */
+  .filters{gap:5px;margin-bottom:.75rem}
+  .fc{padding:4px 9px;font-size:10px}
+  .si{font-size:12px;padding:5px 9px;min-width:100px}
+
+  /* ── ITEMS DE PAGAMENTO ─────────────────────────── */
+  .pi{padding:.75rem .875rem;gap:8px;border-radius:12px}
+  .pico{width:32px;height:32px;font-size:16px;border-radius:8px}
+  .pi-name span.nm{max-width:130px;font-size:12px}
+  .pi-meta{font-size:10px;gap:5px}
+  .pi-amt{font-size:14px}
+  .badge{font-size:9px;padding:2px 6px}
+  .pi-acts{gap:0}
+  .btn.ico{padding:3px 5px;font-size:13px}
+  .qp-circle{width:30px;height:30px}
+
+  /* ── SEÇÃO PAINEL ───────────────────────────────── */
+  .sec-hdr{margin-bottom:.75rem}
+  .sec-title{font-size:13px}
+
+  /* ── MODAL ──────────────────────────────────────── */
+  .modal{border-radius:var(--radius-lg) var(--radius-lg) 0 0;max-height:96vh}
+  .overlay{padding:0;align-items:flex-end}
+  .mbody{padding:.875rem 1rem}
+  .mhdr{padding:.875rem 1rem .75rem}
+  .mfooter{padding:.75rem 1rem}
+  .fi{font-size:14px;padding:9px 11px}
+  .frow{grid-template-columns:1fr 1fr;gap:8px}
+  .sopts{gap:5px}
+  .sb{font-size:11px;padding:7px 4px}
+  .ropts{gap:4px}
+  .rb{font-size:11px;padding:4px 9px}
+
+  /* ── SEÇÃO CONFIG ───────────────────────────────── */
+  .scard{padding:.875rem 1rem;margin-bottom:.75rem}
+  .srow{padding:7px 0}
+  .srow-label{font-size:12px}
+  .srow-desc{font-size:10px}
+
+  /* ── CALENDÁRIO ─────────────────────────────────── */
+  .cal-day{min-height:44px;padding:3px 4px}
+  .cal-day-num{font-size:11px}
+  .cal-dot{width:5px;height:5px}
+  .cal-hdr{font-size:10px}
+  .cal-nav-title{font-size:13px}
+
+  /* ── RELATÓRIOS ─────────────────────────────────── */
+  .rep-grid{grid-template-columns:1fr}
+
+  /* ── BOTTOM NAV ─────────────────────────────────── */
+  .bottom-nav{padding:4px 0 env(safe-area-inset-bottom,16px)}
+  .bnb{padding:4px 6px;font-size:9px;min-width:46px}
+  .bnb svg{width:20px;height:20px}
+}
+
+/* Telas muito pequenas (< 380px) */
+@media(max-width:380px){
+  .mg{grid-template-columns:1fr 1fr}
+  .mc-val{font-size:16px}
+  .pi-name span.nm{max-width:100px}
+  .fc{padding:3px 7px;font-size:9px}
+  .theme-opt{padding:2px 4px;font-size:12px}
 }
 
 /* CONTENT */
@@ -356,7 +442,7 @@ datalist{}
       <button class="theme-opt" id="theme-dark" onclick="setTheme('dark')" title="Escuro">🌙</button>
     </div>
     <button class="bell-btn" id="bell-btn" onclick="reqNotif()">🔔 <span id="bell-lbl">Alertas</span></button>
-    <button class="bell-btn" onclick="logout()" title="Sair" style="border-color:var(--border)">👤 <span id="user-name-btn">Sair</span></button>
+    <button class="bell-btn" onclick="logout()" title="Sair" style="border-color:var(--border)" id="logout-btn">👤 <span id="user-name-btn">Sair</span></button>
     <nav class="nav desktop-nav" id="desktop-nav">
       <button class="nb active" onclick="showPage('dash')" id="nav-dash">🏠 Painel</button>
       <button class="nb" onclick="showPage('pay')" id="nav-pay">📋 Pagamentos</button>
@@ -757,10 +843,14 @@ function updateAdminBadge(count){
 }
 function hide(id){const el=document.getElementById(id);if(el)el.style.display='none';}
 function updateUserBar(){
-  const name=currentProfile?.full_name||currentUser?.email?.split('@')[0]||'Usuário';
+  const full=currentProfile?.full_name||currentUser?.email?.split('@')[0]||'Usuário';
   const isAdmin=currentUser?.email===ADMIN_EMAIL;
   const btn=document.getElementById('user-name-btn');
-  if(btn)btn.textContent=name+(isAdmin?' 👑':'');
+  if(!btn)return;
+  // No mobile mostra só o primeiro nome para não lotar a topbar
+  const isMobile=window.innerWidth<=600;
+  const name=isMobile?(full.split(' ')[0]):(full);
+  btn.textContent=name+(isAdmin?' 👑':'');
 }
 
 function switchForm(f){
@@ -1342,6 +1432,7 @@ function initTheme(){
 initTheme();
 applyC();
 updateBell();
+window.addEventListener('resize',updateUserBar);
 
 initAuth().catch(()=>{loadLocal();renderAll();initPin();if(C.onopen)setTimeout(()=>doCheck(false),1500);});
 
