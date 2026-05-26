@@ -821,6 +821,8 @@ function showApp(isAdmin=false){
   if(isAdmin)initAdminNotifier();
   initPin();
   updateBell();
+  // Inicia Web Push depois que permissões são verificadas
+  setTimeout(()=>initWebPush(isAdmin),1000);
   if(C.onopen)setTimeout(()=>doCheck(false),1500);
 }
 
@@ -1085,8 +1087,13 @@ async function reqNotif(){
   if(!('Notification' in window)){toast('Navegador sem suporte a notificações.','err');return;}
   if(Notification.permission==='granted'){showPage('cfg');return;}
   const p=await Notification.requestPermission();updateBell();
-  if(p==='granted'){toast('🔔 Notificações ativadas!');doCheck(true);}
-  else toast('Permissão negada. Desbloqueie nas configurações do navegador.','err');
+  if(p==='granted'){
+    toast('🔔 Notificações ativadas!');
+    doCheck(true);
+    // Salva Web Push subscription ao ativar notificações
+    const isAdm=currentUser?.email===ADMIN_EMAIL;
+    initWebPush(isAdm);
+  }else toast('Permissão negada. Desbloqueie nas configurações do navegador.','err');
 }
 function push(title,body,tag='p'){
   if(!('Notification' in window)||Notification.permission!=='granted')return;
@@ -1418,6 +1425,61 @@ async function saveLocal(){try{localStorage.setItem('ff_pays',JSON.stringify(pay
 try{const c=localStorage.getItem('ff_cfg');if(c)C={...C,...JSON.parse(c)};}catch(e){}
 try{const o=localStorage.getItem('ff_owners');if(o)owners=JSON.parse(o);}catch(e){}
 try{const t=localStorage.getItem('ff_tags');if(t)allTags=JSON.parse(t);}catch(e){}
+// ── WEB PUSH ────────────────────────────────────────────────
+const VAPID_PUBLIC_KEY='BKtGRToKf0SL-cAHCg3DggURf_wokY10X_QkTy-XiAYo2im9PYI-IE6HW8Dg8JfZkmbL2dAUIBHotLGeBKN-cUs';
+
+function urlBase64ToUint8Array(base64String){
+  const padding='='.repeat((4-base64String.length%4)%4);
+  const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');
+  const rawData=window.atob(base64);
+  return Uint8Array.from([...rawData].map(c=>c.charCodeAt(0)));
+}
+
+async function subscribeToPush(){
+  if(!('serviceWorker' in navigator)||!('PushManager' in window))return null;
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    // Verifica se já tem subscription
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub){
+      sub=await reg.pushManager.subscribe({
+        userVisibleOnly:true,
+        applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+    }
+    return sub;
+  }catch(e){console.warn('Push subscribe error:',e);return null;}
+}
+
+async function savePushSubscription(sub,isAdmin=false){
+  if(!currentUser||!sub)return;
+  const subJson=sub.toJSON();
+  const{error}=await sb.from('push_subscriptions').upsert({
+    user_id:currentUser.id,
+    is_admin:isAdmin,
+    subscription:subJson,
+    user_agent:navigator.userAgent,
+    updated_at:new Date().toISOString()
+  },{onConflict:'user_id,is_admin'});
+  if(error)console.warn('Erro ao salvar push subscription:',error);
+  else console.log('✅ Push subscription salva');
+}
+
+async function initWebPush(isAdmin=false){
+  if(!('serviceWorker' in navigator)||!('PushManager' in window))return;
+  if(Notification.permission!=='granted')return;
+  try{
+    const sub=await subscribeToPush();
+    if(sub)await savePushSubscription(sub,isAdmin);
+    // Escuta renovação automática de subscription
+    navigator.serviceWorker.addEventListener('message',async(e)=>{
+      if(e.data?.type==='SUBSCRIPTION_RENEWED'){
+        await savePushSubscription(e.data.subscription,isAdmin);
+      }
+    });
+  }catch(e){console.warn('initWebPush error:',e);}
+}
+
 // ── TEMA ───────────────────────────────────────────────────
 function setTheme(t){
   const root=document.documentElement;
