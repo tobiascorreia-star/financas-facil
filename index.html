@@ -856,8 +856,10 @@ async function initAdminNotifier(){
   _adminNotifChannel.on('postgres_changes',{event:'INSERT',schema:'public',table:'profiles'},payload=>{
     const p=payload.new;if(!p||p.email===ADMIN_EMAIL)return;
     _pendingCount++;updateAdminBadge(_pendingCount);
-    push('👤 Novo cadastro pendente!',`${p.full_name||p.email} acabou de se cadastrar e aguarda aprovação.`,'novo-cadastro');
+    // Aguarda o push para garantir que o SW foi usado
+    push('👤 Novo cadastro pendente!',`${p.full_name||p.email} acabou de se cadastrar e aguarda aprovação.`,'novo-cadastro-'+Date.now());
     toast(`👤 Novo usuário: ${p.email}`);
+    console.log('[Admin] Novo cadastro detectado:',p.email,'— notificação enviada');
     if(document.getElementById('page-admin')?.classList.contains('active'))loadAdminUsers();
   });
   _adminNotifChannel.subscribe();
@@ -1123,17 +1125,20 @@ async function push(title,body,tag='p'){
   const opts={body,tag,icon:NOTIF_ICON,badge:NOTIF_ICON,vibrate:[200,100,200],data:{url:'./'}};
   let sent=false;
 
-  // 1. Tenta Service Worker (mobile, PWA, iOS, Android)
+  // 1. Service Worker (mobile Android, PWA) — usa .ready que SEMPRE retorna SW ativo
   if('serviceWorker' in navigator){
     try{
-      // Usa Promise.race com timeout — não trava se SW não responder
-      const regPromise=navigator.serviceWorker.getRegistration('./');
-      const reg=await Promise.race([regPromise,new Promise(r=>setTimeout(()=>r(null),1500))]);
-      if(reg&&reg.active){
-        await reg.showNotification(title,opts);
-        sent=true;
-      }
-    }catch(e){console.warn('[Push] SW falhou:',e);}
+      // Timeout de 2s para não travar se SW nunca ficar pronto
+      const reg=await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((_,rej)=>setTimeout(()=>rej(new Error('SW timeout')),2000))
+      ]);
+      await reg.showNotification(title,opts);
+      sent=true;
+      console.log('[Push] ✅ SW showNotification enviado');
+    }catch(e){
+      console.warn('[Push] SW falhou, tentando Notification API:',e.message);
+    }
   }
 
   // 2. Fallback: Notification API direta (desktop Chrome/Firefox/Edge)
@@ -1141,10 +1146,13 @@ async function push(title,body,tag='p'){
     try{
       new Notification(title,{body,tag,icon:NOTIF_ICON});
       sent=true;
-    }catch(e){console.warn('[Push] Notification API falhou:',e);}
+      console.log('[Push] ✅ Notification API enviada');
+    }catch(e){
+      console.warn('[Push] ❌ Notification API falhou:',e.message);
+    }
   }
 
-  if(!sent)console.warn('[Push] Nenhum método funcionou. Verifique permissões do SO.');
+  if(!sent)console.warn('[Push] ❌ Nenhum método funcionou. Permissão:',Notification.permission);
 }
 async function testNotif(){
   if(!('Notification' in window)){toast('❌ Navegador não suporta notificações.','err');return;}
