@@ -1050,18 +1050,14 @@ async function changeUserRole(userId,role){
   updateAdminBadge(_pendingCount);setTimeout(()=>loadAdminUsers(),500);
 }
 async function deleteUser(userId,email){
-  if(!confirm(`⚠️ Excluir "${email}" permanentemente?\n\nO acesso ao sistema será bloqueado imediatamente.\nEsta ação não pode ser desfeita.`))return;
-  try{
-    await sb.from('push_subscriptions').delete().eq('user_id',userId);
-    const{error:pe}=await sb.from('profiles').delete().eq('id',userId);
-    if(pe)throw pe;
-    toast('🗑️ Usuário removido com sucesso!');
-    _pendingCount=adminAllUsers.filter(u=>u.role==='pending'&&u.id!==userId).length;
-    updateAdminBadge(_pendingCount);
-    setTimeout(()=>loadAdminUsers(),500);
-  }catch(e){
-    toast('❌ Erro ao excluir: '+(e.message||e),'err');
-  }
+  if(!confirm(`⚠️ EXCLUIR DEFINITIVAMENTE o usuário "${email}"?\n\nEsta ação apaga todos os dados, pagamentos e o acesso. NÃO pode ser desfeita.`))return;
+  if(!confirm(`Tem CERTEZA ABSOLUTA? Digite OK para confirmar a exclusão de "${email}".`))return;
+  const{error}=await sb.rpc('delete_user_complete',{target_user_id:userId});
+  if(error){toast('❌ Erro ao excluir: '+error.message,'err');return;}
+  toast('🗑️ Usuário excluído com sucesso!');
+  _pendingCount=adminAllUsers.filter(u=>u.role==='pending'&&u.id!==userId).length;
+  updateAdminBadge(_pendingCount);
+  setTimeout(()=>loadAdminUsers(),500);
 }
 
 'use strict';
@@ -1616,7 +1612,7 @@ if('serviceWorker' in navigator){
     navigator.serviceWorker.register('./sw.js',{scope:'./'})
       .then(reg=>{
         _swReg=reg;
-        console.log('SW registrado v3');
+        console.log('SW registrado v4');
 
         // Verifica atualização imediatamente
         reg.update();
@@ -1635,6 +1631,15 @@ if('serviceWorker' in navigator){
 
         // Verifica a cada 5 minutos se há atualização
         setInterval(()=>reg.update(),5*60*1000);
+
+        // Listener para mensagem SW_UPDATED — recarrega automaticamente sem banner
+        navigator.serviceWorker.addEventListener('message',e=>{
+          if(e.data?.type==='SW_UPDATED'&&!_reloading){
+            _reloading=true;
+            console.log('SW atualizou — recarregando...');
+            window.location.reload();
+          }
+        });
       })
       .catch(e=>console.warn('SW erro:',e));
 

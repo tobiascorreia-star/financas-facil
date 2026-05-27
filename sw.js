@@ -1,7 +1,7 @@
-// FinançasFácil — Service Worker v3.0
+// FinançasFácil — Service Worker v4.0
 // ESTRATÉGIA: Network-first para HTML (sempre versão mais recente)
 //             Cache-first para assets estáticos (ícones, manifest)
-const CACHE_NAME = 'financas-facil-v3';
+const CACHE_NAME = 'financas-facil-v4';
 const STATIC_ASSETS = ['./manifest.json', './icon.svg'];
 
 // ── INSTALAÇÃO ────────────────────────────────────────────
@@ -13,7 +13,7 @@ self.addEventListener('install', e => {
   );
 });
 
-// ── ATIVAÇÃO — limpa caches antigos ───────────────────────
+// ── ATIVAÇÃO — limpa caches antigos E força reload das abas ──
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
@@ -23,7 +23,16 @@ self.addEventListener('activate', e => {
           return caches.delete(k);
         })
       ))
-      .then(() => self.clients.claim()) // assume controle de todas as abas
+      .then(() => self.clients.claim())
+      .then(() => {
+        // Notifica todas as abas abertas para recarregar ao ativar nova versão
+        return self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+          .then(clients => {
+            clients.forEach(client => {
+              client.postMessage({ type: 'SW_UPDATED' });
+            });
+          });
+      })
   );
 });
 
@@ -37,15 +46,13 @@ self.addEventListener('fetch', e => {
   if (url.includes('supabase.co')) return;
 
   // ── HTML: SEMPRE network-first ────────────────────────
-  // index.html nunca vem do cache — garante versão mais recente
   if (e.request.destination === 'document' ||
       url.endsWith('/') ||
       url.endsWith('/index.html') ||
       url.endsWith('.html')) {
     e.respondWith(
-      fetch(e.request)
+      fetch(e.request, { cache: 'no-store' }) // força buscar do servidor, nunca do cache HTTP
         .then(response => {
-          // Salva no cache só se veio do servidor com sucesso
           if (response.ok) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
@@ -77,10 +84,10 @@ self.addEventListener('fetch', e => {
   );
 });
 
-// ── MENSAGEM DO APP (ex: pedir para ativar imediatamente) ────
+// ── MENSAGEM DO APP ───────────────────────────────────────
 self.addEventListener('message', e => {
   if (e.data?.type === 'SKIP_WAITING') {
-    self.skipWaiting(); // ativa o novo SW imediatamente
+    self.skipWaiting();
   }
 });
 
@@ -92,14 +99,14 @@ self.addEventListener('push', e => {
 
   e.waitUntil(
     self.registration.showNotification(data.title || 'FinançasFácil', {
-      body:                data.body    || '',
-      tag:                 data.tag     || 'financas-push',
-      icon:                data.icon    || './icon.svg',
-      badge:               data.badge   || './icon.svg',
-      data:                { url: data.url || './' },
-      actions:             data.actions || [],
-      requireInteraction:  data.requireInteraction || false,
-      vibrate:             [200, 100, 200],
+      body:               data.body    || '',
+      tag:                data.tag     || 'financas-push',
+      icon:               data.icon    || './icon.svg',
+      badge:              data.badge   || './icon.svg',
+      data:               { url: data.url || './' },
+      actions:            data.actions || [],
+      requireInteraction: data.requireInteraction || false,
+      vibrate:            [200, 100, 200],
     })
   );
 });
