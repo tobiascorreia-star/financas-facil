@@ -904,6 +904,23 @@ function updateUserBar(){
   const isMobile=window.innerWidth<=600;
   const name=isMobile?(full.split(' ')[0]):(full);
   btn.textContent=name+(isAdmin?' 👑':'');
+  // Banner de trial — mostra dias restantes para usuários em período de avaliação
+  const trialUntil=currentProfile?.trial_until?new Date(currentProfile.trial_until):null;
+  const isTrial=currentProfile?.role==='trial'&&trialUntil&&trialUntil>new Date();
+  let banner=document.getElementById('trial-banner');
+  if(isTrial){
+    const dias=Math.ceil((trialUntil-new Date())/(1000*60*60*24));
+    if(!banner){
+      banner=document.createElement('div');
+      banner.id='trial-banner';
+      banner.style.cssText='background:#EFF6FF;border-bottom:1px solid #93C5FD;padding:6px 1rem;text-align:center;font-size:12px;color:#1D4ED8;font-weight:500;position:sticky;top:54px;z-index:99';
+      const topbar=document.querySelector('.topbar');
+      if(topbar)topbar.insertAdjacentElement('afterend',banner);
+    }
+    banner.textContent='🆓 Período de avaliação: '+dias+' dia'+(dias!==1?'s':'')+' restante'+(dias!==1?'s':'');
+  }else if(banner){
+    banner.remove();
+  }
 }
 
 function switchForm(f){
