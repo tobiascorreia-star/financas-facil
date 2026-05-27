@@ -840,9 +840,9 @@ function showApp(isAdmin=false){
   const adminNav=document.getElementById('nav-admin');const adminBnav=document.getElementById('bnav-admin');
   if(adminNav)adminNav.style.display=isAdmin?'':'none';
   if(adminBnav)adminBnav.style.display=isAdmin?'flex':'none';
-  updateUserBar();
   loadDataFromSupabase();
   initRealtime();
+  setTimeout(()=>updateUserBar(),100);
   if(isAdmin)initAdminNotifier();
   initPin();
   updateBell();
