@@ -750,7 +750,10 @@ async function initAuth(){
   if(session)await handleSession(session);
   else showAuthScreen();
   sb.auth.onAuthStateChange(async(event,session)=>{
-    if(event==='SIGNED_IN'&&session)await handleSession(session);
+    if(event==='SIGNED_IN'&&session){
+      if(_skipNextAuthChange){_skipNextAuthChange=false;return;}
+      await handleSession(session);
+    }
     else if(event==='SIGNED_OUT'){currentUser=null;currentProfile=null;showAuthScreen();}
   });
 }
@@ -855,17 +858,43 @@ function showScreen(s){
   const el=document.getElementById(s+'-screen');if(el)el.style.display='flex';
 }
 async function openChangePasswordModal(){
-  const newPwd=prompt('🔐 Digite sua nova senha (mínimo 6 caracteres):');
-  if(!newPwd)return;
-  if(newPwd.length<6){alert('❌ Senha precisa ter pelo menos 6 caracteres.');return;}
-  const confirm2=prompt('Confirme a nova senha:');
-  if(newPwd!==confirm2){alert('❌ As senhas não conferem.');return;}
-  const{error}=await sb.auth.updateUser({password:newPwd});
-  if(error){toast('❌ Erro ao trocar senha: '+error.message,'err');return;}
-  await sb.rpc('mark_password_changed');
-  currentProfile.must_change_password=false;
-  updateUserBar();
-  toast('✅ Senha alterada com sucesso!');
+  await forceChangePassword();
+}
+async function forceChangePassword(){
+  // Modal customizado bloqueante
+  let modal=document.getElementById('force-pwd-modal');
+  if(modal)return;
+  modal=document.createElement('div');
+  modal.id='force-pwd-modal';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:10000;display:flex;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px)';
+  modal.innerHTML='<div style="background:var(--surface);border-radius:14px;width:100%;max-width:400px;padding:1.5rem;box-shadow:0 24px 64px rgba(0,0,0,0.3)"><div style="text-align:center;margin-bottom:1rem"><div style="font-size:48px;margin-bottom:8px">🔐</div><div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px">Troca de senha obrigatória</div><div style="font-size:13px;color:var(--text2);line-height:1.5">Sua senha foi redefinida pelo administrador.<br>Por segurança, crie uma nova senha agora.</div></div><div style="margin-bottom:10px"><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">Nova senha (mín. 6 caracteres)</label><input id="fp-new" type="password" class="auth-input" style="margin-bottom:0" autocomplete="new-password"></div><div style="margin-bottom:14px"><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">Confirmar nova senha</label><input id="fp-confirm" type="password" class="auth-input" style="margin-bottom:0" autocomplete="new-password"></div><div id="fp-err" style="font-size:12px;color:var(--red-dark);background:var(--red-bg);border:1px solid var(--red);border-radius:8px;padding:8px 12px;margin-bottom:10px;display:none"></div><button id="fp-save" class="auth-btn primary" style="width:100%;margin-bottom:0">🔓 Trocar senha agora</button></div>';
+  document.body.appendChild(modal);
+  const save=document.getElementById('fp-save');
+  const newI=document.getElementById('fp-new');
+  const confI=document.getElementById('fp-confirm');
+  const err=document.getElementById('fp-err');
+  function showErr(m){err.textContent=m;err.style.display='block';}
+  save.onclick=async()=>{
+    err.style.display='none';
+    const newPwd=newI.value;const conf=confI.value;
+    if(!newPwd||newPwd.length<6){showErr('A senha precisa ter pelo menos 6 caracteres.');return;}
+    if(newPwd!==conf){showErr('As senhas não conferem.');return;}
+    save.disabled=true;save.textContent='Salvando...';
+    try{
+      const{error}=await sb.auth.updateUser({password:newPwd});
+      if(error){showErr('Erro: '+error.message);save.disabled=false;save.textContent='🔓 Trocar senha agora';return;}
+      await sb.rpc('mark_password_changed');
+      currentProfile.must_change_password=false;
+      modal.remove();
+      updateUserBar();
+      toast('✅ Senha alterada com sucesso!');
+    }catch(e){
+      showErr('Erro inesperado: '+e.message);
+      save.disabled=false;save.textContent='🔓 Trocar senha agora';
+    }
+  };
+  newI.focus();
+  [newI,confI].forEach(i=>i.addEventListener('keydown',e=>{if(e.key==='Enter')save.click();}));
 }
 
 function showApp(isAdmin=false){
@@ -880,6 +909,10 @@ function showApp(isAdmin=false){
     if(pageAdmin&&pageAdmin.classList.contains('active')){
       showPage('dash');
     }
+  }
+  // Se precisa trocar senha — bloqueia tudo e abre modal IMEDIATAMENTE
+  if(currentProfile?.must_change_password===true&&!isAdmin){
+    setTimeout(()=>forceChangePassword(),300);
   }
   loadDataFromSupabase();
   initRealtime();
@@ -982,11 +1015,19 @@ async function loginGoogle(){const{error}=await sb.auth.signInWithOAuth({provide
 async function doLogin(){
   const email=document.getElementById('auth-email').value.trim();const pass=document.getElementById('auth-pass').value;
   if(!email||!pass){showAuthErr('Preencha e-mail e senha.');return;}
-  const{data,error}=await sb.auth.signInWithPassword({email,password:pass});
-  if(error){showAuthErr('E-mail ou senha incorretos.');return;}
-  // Força redirect imediato (evita depender do onAuthStateChange que às vezes atrasa)
-  if(data?.session)await handleSession(data.session);
+  const btn=event?.target;if(btn){btn.disabled=true;btn.textContent='Entrando...';}
+  try{
+    const{data,error}=await sb.auth.signInWithPassword({email,password:pass});
+    if(error){showAuthErr('E-mail ou senha incorretos.');return;}
+    if(data?.session){
+      _skipNextAuthChange=true;
+      await handleSession(data.session);
+    }
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='Entrar';}
+  }
 }
+let _skipNextAuthChange=false;
 async function doRegister(){
   const name=document.getElementById('reg-name').value.trim();const email=document.getElementById('reg-email').value.trim();const pass=document.getElementById('reg-pass').value;
   if(!name||!email||!pass){showAuthErr('Preencha todos os campos.');return;}
