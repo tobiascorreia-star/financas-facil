@@ -769,7 +769,7 @@ async function handleSession(session){
     const{data:newProfile}=await sb.from('profiles').upsert({
       id:currentUser.id,email:currentUser.email,
       full_name:currentUser.user_metadata?.full_name||currentUser.email.split('@')[0],
-      role:currentUser.email===ADMIN_EMAIL?'approved':'pending'
+      role:currentUser.email===ADMIN_EMAIL?'approved':'trial',trial_until:currentUser.email===ADMIN_EMAIL?null:new Date(Date.now()+7*24*60*60*1000).toISOString()
     },{onConflict:'id'}).select().single();
     profile=newProfile;
   }
@@ -820,7 +820,7 @@ async function checkStatusNow(){
   try{
     let{data:p}=await sb.from('profiles').select('role').eq('id',currentUser.id).single();
     if(!p){
-      const{data:newP}=await sb.from('profiles').upsert({id:currentUser.id,email:currentUser.email,full_name:currentUser.user_metadata?.full_name||currentUser.email.split('@')[0],role:'pending'},{onConflict:'id'}).select('role').single();
+      const{data:newP}=await sb.from('profiles').upsert({id:currentUser.id,email:currentUser.email,full_name:currentUser.user_metadata?.full_name||currentUser.email.split('@')[0],role:'trial',trial_until:new Date(Date.now()+7*24*60*60*1000).toISOString()},{onConflict:'id'}).select('role,trial_until').single();
       p=newP;
     }
     if(!p){toast('❌ Perfil não encontrado. Tente sair e entrar novamente.','err');return;}
@@ -871,7 +871,7 @@ function showApp(isAdmin=false){
 let _adminNotifChannel=null,_pendingCount=0;
 async function initAdminNotifier(){
   const{data}=await sb.rpc('get_all_profiles');
-  _pendingCount=(data||[]).filter(u=>u.role==='pending').length;
+  _pendingCount=(data||[]).filter(u=>u.role==='pending'||u.role==='trial').length;
   updateAdminBadge(_pendingCount);
   if(_adminNotifChannel){try{sb.removeChannel(_adminNotifChannel);}catch(e){}}
   _adminNotifChannel=sb.channel('admin-new-users');
@@ -898,10 +898,25 @@ function updateUserBar(){
   const isAdmin=currentUser?.email===ADMIN_EMAIL;
   const btn=document.getElementById('user-name-btn');
   if(!btn)return;
-  // No mobile mostra só o primeiro nome para não lotar a topbar
   const isMobile=window.innerWidth<=600;
   const name=isMobile?(full.split(' ')[0]):(full);
   btn.textContent=name+(isAdmin?' 👑':'');
+  // Banner de trial
+  const trialUntil=currentProfile?.trial_until?new Date(currentProfile.trial_until):null;
+  const isTrial=currentProfile?.role==='trial'&&trialUntil&&trialUntil>new Date();
+  let banner=document.getElementById('trial-banner');
+  if(isTrial){
+    const dias=Math.ceil((trialUntil-new Date())/(1000*60*60*24));
+    if(!banner){
+      banner=document.createElement('div');
+      banner.id='trial-banner';
+      banner.style.cssText='background:#EFF6FF;border-bottom:1px solid #93C5FD;padding:6px 1rem;text-align:center;font-size:12px;color:#1D4ED8;font-weight:500';
+      document.querySelector('.topbar')?.insertAdjacentElement('afterend',banner);
+    }
+    banner.textContent=`🆓 Período de avaliação: ${dias} dia${dias!==1?'s':''} restante${dias!==1?'s':''}`;
+  } else if(banner){
+    banner.remove();
+  }
 }
 
 function switchForm(f){
@@ -1031,13 +1046,13 @@ function adminFilter(f,el){
   adminFilter_=f;document.querySelectorAll('#page-admin .fc').forEach(e=>e.classList.remove('active'));if(el)el.classList.add('active');renderAdminUsers();
 }
 function roleBadge(role){
-  const map={pending:`<span class="role-badge pending">⏳ Pendente</span>`,approved:`<span class="role-badge approved">✅ Aprovado</span>`,rejected:`<span class="role-badge rejected">❌ Reprovado</span>`,suspended_provisional:`<span class="role-badge" style="background:#F3E8FF;color:#7C3AED;border:1px solid #A78BFA">⏸️ Suspenso (prov.)</span>`,suspended_definitive:`<span class="role-badge" style="background:#FEF3C7;color:#92400E;border:1px solid #F59E0B">🔒 Suspenso (def.)</span>`};
+  const map={pending:`<span class="role-badge pending">⏳ Pendente</span>`,trial:`<span class="role-badge" style="background:#EFF6FF;color:#1D4ED8;border:1px solid #93C5FD">🆓 Trial</span>`,approved:`<span class="role-badge approved">✅ Aprovado</span>`,rejected:`<span class="role-badge rejected">❌ Reprovado</span>`,suspended_provisional:`<span class="role-badge" style="background:#F3E8FF;color:#7C3AED;border:1px solid #A78BFA">⏸️ Suspenso (prov.)</span>`,suspended_definitive:`<span class="role-badge" style="background:#FEF3C7;color:#92400E;border:1px solid #F59E0B">🔒 Suspenso (def.)</span>`};
   return map[role]||`<span class="role-badge">${role}</span>`;
 }
 function adminActions(u){
   if(u.email===ADMIN_EMAIL)return`<span class="role-badge approved">👑 Admin</span>`;
   const r=u.role;let btns='';
-  if(r==='pending'){btns+=`<button class="admin-btn approve" onclick="changeUserRole('${u.id}','approved')">✅ Aprovar</button>`;btns+=`<button class="admin-btn revoke" onclick="changeUserRole('${u.id}','rejected')">❌ Reprovar</button>`;btns+=`<button class="admin-btn delete" onclick="deleteUser('${u.id}','${(u.email||'').replace(/'/g,"\\'")}')">🗑️ Excluir</button>`;}
+  if(r==='pending'||r==='trial'){btns+=`<button class="admin-btn approve" onclick="changeUserRole('${u.id}','approved')">✅ Aprovar</button>`;btns+=`<button class="admin-btn revoke" onclick="changeUserRole('${u.id}','rejected')">❌ Reprovar</button>`;btns+=`<button class="admin-btn delete" onclick="deleteUser('${u.id}','${(u.email||'').replace(/'/g,"\\'")}')">🗑️ Excluir</button>`;}
   else if(r==='approved'){btns+=`<button class="admin-btn suspend-p" onclick="changeUserRole('${u.id}','suspended_provisional')">⏸ Susp. prov.</button>`;btns+=`<button class="admin-btn suspend-d" onclick="changeUserRole('${u.id}','suspended_definitive')">🔒 Susp. def.</button>`;btns+=`<button class="admin-btn revoke" onclick="changeUserRole('${u.id}','rejected')">❌ Revogar</button>`;}
   else if(r==='suspended_provisional'||r==='suspended_definitive'){btns+=`<button class="admin-btn approve" onclick="changeUserRole('${u.id}','approved')">✅ Reativar</button>`;btns+=`<button class="admin-btn revoke" onclick="changeUserRole('${u.id}','rejected')">❌ Revogar</button>`;btns+=`<button class="admin-btn delete" onclick="deleteUser('${u.id}','${(u.email||'').replace(/'/g,"\\'")}')">🗑️ Excluir</button>`;}
   else if(r==='rejected'){btns+=`<button class="admin-btn approve" onclick="changeUserRole('${u.id}','approved')">✅ Aprovar</button>`;btns+=`<button class="admin-btn delete" onclick="deleteUser('${u.id}','${(u.email||'').replace(/'/g,"\\'")}')">🗑️ Excluir</button>`;}
@@ -1686,13 +1701,13 @@ function applyUpdate(){
 @keyframes mf-modal-in{from{opacity:0;transform:translateY(20px) scale(0.97)}to{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes mf-overlay-out{from{opacity:1}to{opacity:0}}
 #mf-privacy-overlay.mf-hiding{animation:mf-overlay-out 0.28s cubic-bezier(.4,0,.2,1) forwards}
-#mf-privacy-modal{background:var(--mf-white);border-radius:var(--mf-radius-lg);box-shadow:var(--mf-shadow);width:100%;max-width:500px;overflow:hidden;animation:mf-modal-in 0.36s cubic-bezier(.4,0,.2,1)}
-#mf-privacy-overlay .mf-header{background:var(--mf-green);padding:2rem 2rem 1.75rem;text-align:center}
-#mf-privacy-overlay .mf-shield-wrap{width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,0.16);display:flex;align-items:center;justify-content:center;margin:0 auto 1.1rem}
+#mf-privacy-modal{background:var(--mf-white);border-radius:var(--mf-radius-lg);box-shadow:var(--mf-shadow);width:100%;max-width:480px;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;animation:mf-modal-in 0.36s cubic-bezier(.4,0,.2,1)}
+#mf-privacy-overlay .mf-header{background:var(--mf-green);padding:1rem 1.5rem 0.9rem;text-align:center;flex-shrink:0}
+#mf-privacy-overlay .mf-shield-wrap{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.16);display:flex;align-items:center;justify-content:center;margin:0 auto 0.5rem}
 #mf-privacy-overlay .mf-shield-wrap svg{width:28px;height:28px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #mf-privacy-overlay .mf-header h2{color:#fff;font-size:1.15rem;font-weight:600;margin:0 0 6px;letter-spacing:-0.01em}
 #mf-privacy-overlay .mf-header p{color:rgba(255,255,255,0.82);font-size:0.86rem;margin:0;line-height:1.55}
-#mf-privacy-overlay .mf-body{padding:1.6rem 2rem 1.5rem}
+#mf-privacy-overlay .mf-body{padding:1rem 1.5rem 1.25rem}
 #mf-privacy-overlay .mf-intro{font-size:0.875rem;color:var(--mf-gray-600);line-height:1.7;margin:0 0 1.2rem}
 #mf-privacy-overlay .mf-items{display:flex;flex-direction:column;gap:10px;margin-bottom:1.2rem}
 #mf-privacy-overlay .mf-item{display:flex;gap:12px;align-items:flex-start;background:var(--mf-green-light);border-left:3px solid var(--mf-green);border-radius:var(--mf-radius-md);padding:12px 14px;transition:background 0.18s ease}
@@ -1711,7 +1726,7 @@ function applyUpdate(){
 #mf-privacy-overlay .mf-footer{border-top:1px solid var(--mf-border);padding:11px 2rem;text-align:center}
 #mf-privacy-overlay .mf-footer p{font-size:0.72rem;color:var(--mf-gray-400);margin:0;display:flex;align-items:center;justify-content:center;gap:5px}
 #mf-privacy-overlay .mf-footer svg{width:12px;height:12px;stroke:var(--mf-gray-400);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
-@media(max-width:520px){#mf-privacy-overlay .mf-header,#mf-privacy-overlay .mf-body,#mf-privacy-overlay .mf-footer{padding-left:1.25rem;padding-right:1.25rem}#mf-privacy-overlay .mf-header h2{font-size:1.05rem}}
+@media(max-width:520px){#mf-privacy-overlay{padding:0.4rem;align-items:flex-start;padding-top:max(0.4rem,env(safe-area-inset-top))}#mf-privacy-modal{max-height:calc(100vh - 0.8rem);border-radius:10px}#mf-privacy-overlay .mf-header,#mf-privacy-overlay .mf-body,#mf-privacy-overlay .mf-footer{padding-left:1rem;padding-right:1rem}#mf-privacy-overlay .mf-header h2{font-size:0.95rem}#mf-privacy-overlay .mf-header p{font-size:0.78rem}#mf-privacy-overlay .mf-items{gap:6px;margin-bottom:0.75rem}#mf-privacy-overlay .mf-item{padding:9px 11px}#mf-privacy-overlay .mf-note{margin-bottom:0.75rem;padding:9px 11px}#mf-privacy-overlay .mf-intro{font-size:0.82rem;margin-bottom:0.75rem}}
 </style>
 
 <div id="mf-privacy-overlay" role="dialog" aria-modal="true" aria-labelledby="mf-dialog-title" style="display:none">
