@@ -1,0 +1,1924 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>MegaFllex Auditoria</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fff;--bg2:#f5f5f3;--bg3:#eeede8;
+  --txt:#1a1a18;--txt2:#6b6b67;--txt3:#9c9a92;
+  --brd:rgba(0,0,0,0.12);--brd2:rgba(0,0,0,0.22);
+  --r:8px;--rl:12px;
+  --mega:#EEEDFE;--mega-brd:#AFA9EC;--mega-txt:#3C3489;--mega-sub:#534AB7;
+  --prop:#FFF3CD;--prop-brd:#E6A817;--prop-txt:#7A5000;
+  --oper:#FFD6D6;--oper-brd:#D85A30;--oper-txt:#7A1A1A;
+  --pos:#1D9E75;--neg:#D85A30;
+  --ok-bg:#EAF3DE;--ok-txt:#3B6D11;
+  --diff-bg:#FAECE7;--diff-txt:#993C1D;
+}
+[data-tema="escuro"]{
+  --bg:#1c1c1a;--bg2:#252523;--bg3:#2e2e2b;
+  --txt:#e8e6de;--txt2:#9c9a92;--txt3:#6b6b67;
+  --brd:rgba(255,255,255,0.12);--brd2:rgba(255,255,255,0.22);
+  --mega:#1e1a3a;--mega-brd:#4a4280;--mega-txt:#c5bff5;--mega-sub:#9b93e8;
+  --prop:#2a2000;--prop-brd:#8a6500;--prop-txt:#f5d980;
+  --oper:#2a1010;--oper-brd:#8a3520;--oper-txt:#f5a090;
+  --ok-bg:#0f2010;--ok-txt:#5dd49a;
+  --diff-bg:#2a1010;--diff-txt:#f5a090;
+}
+@media(prefers-color-scheme:dark){
+  [data-tema="sistema"]{
+    --bg:#1c1c1a;--bg2:#252523;--bg3:#2e2e2b;
+    --txt:#e8e6de;--txt2:#9c9a92;--txt3:#6b6b67;
+    --brd:rgba(255,255,255,0.12);--brd2:rgba(255,255,255,0.22);
+    --mega:#1e1a3a;--mega-brd:#4a4280;--mega-txt:#c5bff5;--mega-sub:#9b93e8;
+    --prop:#2a2000;--prop-brd:#8a6500;--prop-txt:#f5d980;
+    --oper:#2a1010;--oper-brd:#8a3520;--oper-txt:#f5a090;
+    --ok-bg:#0f2010;--ok-txt:#5dd49a;
+    --diff-bg:#2a1010;--diff-txt:#f5a090;
+  }
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:var(--txt);background:var(--bg3);min-height:100vh}
+.app{max-width:1400px;margin:0 auto;padding:12px}
+.screen{display:none}.screen.active{display:block}
+.card{background:var(--bg);border:0.5px solid var(--brd);border-radius:var(--rl);overflow:hidden;margin-bottom:12px}
+.inner{padding:0 14px 14px}
+.topbar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:0.5px solid var(--brd)}
+.topbar-info{flex:1;min-width:0}
+.avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+.av-mega{background:var(--mega);color:var(--mega-txt)}.av-emp{background:var(--prop);color:var(--prop-txt)}.av-fil{background:var(--oper);color:var(--oper-txt)}
+.btn-sair{display:flex;align-items:center;gap:5px;padding:6px 10px;border-radius:var(--r);border:0.5px solid var(--brd2);background:var(--bg2);cursor:pointer;font-size:11px;color:var(--txt2);white-space:nowrap;flex-shrink:0;font-family:inherit}
+.tab-bar{display:flex;gap:5px;margin-bottom:12px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.tab-bar::-webkit-scrollbar{display:none}
+.tab{padding:5px 11px;border-radius:var(--r);border:0.5px solid var(--brd);font-size:12px;cursor:pointer;background:var(--bg);color:var(--txt2);white-space:nowrap;flex-shrink:0;font-family:inherit}
+.tab.active{background:var(--bg2);color:var(--txt);font-weight:500}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+@media(max-width:500px){.grid2,.grid3{grid-template-columns:1fr}.grid4{grid-template-columns:1fr 1fr}}
+.metric{border-radius:var(--r);padding:.85rem 1rem;text-align:center}
+.metric .lbl{font-size:11px;margin-bottom:3px}
+.metric .val{font-size:18px;font-weight:500}
+.irow{display:flex;flex-direction:column;gap:3px;margin-bottom:8px}
+.irow label{font-size:11px;color:var(--txt2);font-weight:500}
+.irow input,.irow select,.irow textarea{padding:8px 10px;border:0.5px solid var(--brd2);border-radius:var(--r);background:var(--bg);color:var(--txt);font-size:14px;width:100%;font-family:inherit;-webkit-appearance:none}
+.irow input:focus,.irow select:focus{outline:none;border-color:var(--mega-sub)}
+.input-brl{position:relative}
+.input-brl .prefix{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--txt2);pointer-events:none}
+.input-brl input{padding-left:32px!important}
+.tbl-wrap{border:0.5px solid var(--brd);border-radius:var(--r);overflow-x:scroll;overflow-y:auto;max-height:60vh;-webkit-overflow-scrolling:touch;margin-bottom:10px;display:block;width:100%}
+table{width:max-content;min-width:100%;border-collapse:collapse;font-size:11px}
+th{background:var(--bg2);color:var(--txt2);font-weight:500;padding:7px 9px;text-align:right;border-bottom:0.5px solid var(--brd);font-size:10px;white-space:nowrap;position:sticky;top:0;z-index:3}
+th:first-child{text-align:left;position:sticky;left:0;z-index:2;background:var(--bg2)}
+td{padding:7px 9px;border-bottom:0.5px solid var(--brd);text-align:right;white-space:nowrap}
+td:first-child{text-align:left;font-weight:500;position:sticky;left:0;z-index:1;background:var(--bg)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg2)}
+tr:hover td:first-child{background:var(--bg2)}
+.total-row td{background:var(--bg2)!important;font-weight:500;border-top:0.5px solid var(--brd2)}
+.cel-prop{background:#FFF3CD!important;border-bottom:2px solid #E6A817!important}
+.cel-oper{background:#FFD6D6!important;border-bottom:2px solid #D85A30!important}
+.cel-mega{background:#EEEDFE!important;border-bottom:2px solid #AFA9EC!important}
+.cel-admin{background:#D8EBFF!important;border-bottom:2px solid #5B9BD5!important}
+.cel-prop.neg,.cel-oper.neg,.cel-mega.neg,.cel-admin.neg{color:#c0392b!important}.cel-prop.pos,.cel-oper.pos,.cel-mega.pos,.cel-admin.pos{color:#1D9E75!important}
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:var(--r);font-size:10px;font-weight:500}
+.b-ok{background:var(--ok-bg);color:var(--ok-txt)}.b-diff{background:var(--diff-bg);color:var(--diff-txt)}
+.b-prop{background:var(--prop);color:var(--prop-txt);border:0.5px solid var(--prop-brd)}
+.b-oper{background:var(--oper);color:var(--oper-txt);border:0.5px solid var(--oper-brd)}
+.notice{border-radius:var(--r);padding:8px 10px;font-size:11px;margin-bottom:10px;display:flex;gap:6px;align-items:flex-start;line-height:1.5}
+.n-mega{background:var(--mega);color:var(--mega-txt)}.n-warn{background:#FFF3CD;color:#7A5000}
+.n-oper{background:var(--oper);color:var(--oper-txt)}.n-danger{background:#FAECE7;color:#993C1D}
+.sect{font-size:11px;font-weight:500;color:var(--txt2);margin:12px 0 6px;text-transform:uppercase;letter-spacing:.04em}
+.pos{color:#1D9E75;font-weight:500}.neg{color:#c0392b!important;font-weight:500}.neu{color:var(--txt2)}
+.btn{padding:9px 14px;border-radius:var(--r);border:0.5px solid var(--brd2);background:var(--bg2);cursor:pointer;font-size:13px;font-weight:500;color:var(--txt);font-family:inherit}
+.btn:hover{background:var(--bg3)}
+.btn-danger{padding:9px 14px;border-radius:var(--r);border:0.5px solid var(--oper-brd);background:var(--oper);cursor:pointer;font-size:13px;font-weight:500;color:var(--oper-txt);font-family:inherit}
+.btn-sm{padding:5px 9px;border-radius:var(--r);border:0.5px solid var(--brd);background:none;cursor:pointer;font-size:12px;color:var(--txt2);font-family:inherit}
+.btn-sm:hover{background:var(--bg2)}
+.emp-card{border:0.5px solid var(--brd);border-radius:var(--rl);padding:12px;margin-bottom:7px;background:var(--bg)}
+.emp-card:hover{background:var(--bg2)}
+.legenda{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--txt2)}
+.leg-box{width:20px;height:13px;border-radius:2px;border-bottom:2px solid;flex-shrink:0}
+.audit-card{border:0.5px solid var(--brd);border-radius:var(--rl);padding:10px 12px;margin-bottom:8px}
+.col-change{display:flex;align-items:center;gap:6px;padding:5px 9px;border-radius:var(--r);background:var(--bg2);font-size:11px;margin-bottom:4px;flex-wrap:wrap}
+.grupo-titulo{font-size:11px;font-weight:700;color:var(--mega-txt);background:var(--mega);padding:5px 12px;border-radius:var(--r);margin:12px 0 6px;border-left:3px solid var(--mega-sub);letter-spacing:0.04em;text-transform:uppercase}
+.campo-tag{display:inline-flex;align-items:center;gap:4px;background:var(--bg2);border:0.5px solid var(--brd);border-radius:var(--r);padding:3px 8px;font-size:11px;margin:2px}
+.campo-tag button{border:none;background:none;cursor:pointer;color:var(--txt3);font-size:13px;line-height:1;padding:0}
+.rodape{text-align:center;padding:10px 0 4px;font-size:10px;color:var(--txt3);border-top:0.5px solid var(--brd);margin-top:6px}
+.logo-shield{display:inline-flex;align-items:center;justify-content:center}
+.logo-shield svg{display:block}
+.obs-tri{position:absolute;top:0;right:0;width:0;height:0;border-style:solid;border-width:0 7px 7px 0;border-color:transparent #c0392b transparent transparent;cursor:pointer}
+.cel-com-obs{position:relative}
+.obs-tip{display:none;position:fixed;background:#1a1a18;color:#fff;font-size:11px;padding:6px 10px;border-radius:6px;max-width:220px;z-index:999;white-space:pre-wrap;line-height:1.4;pointer-events:none}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--brd2);border-top-color:var(--mega-sub);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1rem}
+.login-card{background:var(--bg);border:0.5px solid var(--brd);border-radius:var(--rl);padding:1.75rem;width:100%;max-width:360px}
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:flex-end;justify-content:center;z-index:200}
+@media(min-width:600px){.modal-backdrop{align-items:center;padding:20px}}
+.modal-box{background:var(--bg);border:0.5px solid var(--brd2);border-radius:var(--rl) var(--rl) 0 0;padding:1.25rem;width:100%;max-height:90vh;overflow-y:auto}
+@media(min-width:600px){.modal-box{border-radius:var(--rl);max-width:460px}}
+.modal-handle{width:40px;height:4px;border-radius:2px;background:var(--brd2);margin:0 auto 14px}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.modal-header h3{font-size:14px;font-weight:500}
+.modal-footer{display:flex;gap:8px;margin-top:14px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="s-login" class="screen active">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div style="text-align:center;margin-bottom:1.5rem">
+        <div style="margin:0 auto 10px;width:40px;height:40px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="40" height="40">
+  <defs>
+    <linearGradient id="face_login" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0A2A5E"></stop>
+      <stop offset="20%" stop-color="#1C57C9"></stop>
+      <stop offset="42%" stop-color="#6FA0EE"></stop>
+      <stop offset="50%" stop-color="#E8F1FF"></stop>
+      <stop offset="58%" stop-color="#6FA0EE"></stop>
+      <stop offset="80%" stop-color="#1C57C9"></stop>
+      <stop offset="100%" stop-color="#0A2A5E"></stop>
+    </linearGradient>
+    <linearGradient id="shade_login" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25"></stop>
+      <stop offset="60%" stop-color="#000000" stop-opacity="0"></stop>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.35"></stop>
+    </linearGradient>
+  </defs>
+  <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="#04122B" opacity="0.3" transform="translate(0 3)"></path>
+  <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="#04122B"></path>
+  <g transform="translate(32 33) scale(0.92) translate(-32 -33)">
+    <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="url(#face_login)"></path>
+    <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="url(#shade_login)"></path>
+  </g>
+  <path d="M18 46 L18 22 L26 22 L32 32 L38 22 L46 22 L46 46 L40 46 L40 30 L34 40 L30 40 L24 30 L24 46 Z" fill="#ffffff"></path>
+</svg></div>
+        <div style="font-size:18px;font-weight:500">MegaFllex Auditoria</div>
+        <div style="font-size:12px;color:var(--txt2);margin-top:4px">Sistema de conciliação financeira</div>
+        <div style="display:flex;justify-content:center;gap:4px;margin-top:10px">
+          <button onclick="setTema('claro')" id="btn-claro" style="padding:4px 10px;border-radius:var(--r);border:0.5px solid var(--brd2);background:var(--bg2);cursor:pointer;font-size:11px;color:var(--txt2);font-family:inherit">☀️ Claro</button>
+          <button onclick="setTema('escuro')" id="btn-escuro" style="padding:4px 10px;border-radius:var(--r);border:0.5px solid var(--brd2);background:var(--bg2);cursor:pointer;font-size:11px;color:var(--txt2);font-family:inherit">🌙 Escuro</button>
+          <button onclick="setTema('sistema')" id="btn-sistema" style="padding:4px 10px;border-radius:var(--r);border:0.5px solid var(--brd2);background:var(--bg2);cursor:pointer;font-size:11px;color:var(--txt2);font-family:inherit">⚙️ Sistema</button>
+        </div>
+      </div>
+      <div id="login-erro" class="notice n-danger" style="display:none"></div>
+      <div class="irow"><label>E-mail</label><input type="email" id="l-email" placeholder="seu@email.com" autocomplete="username"></div>
+      <div class="irow"><label>Senha</label>
+      <div style="position:relative">
+        <input type="password" id="l-senha" placeholder="••••••••" autocomplete="current-password" style="width:100%;padding:8px 40px 8px 10px;border:0.5px solid var(--brd2);border-radius:var(--r);background:var(--bg);color:var(--txt);font-size:14px;font-family:inherit;-webkit-appearance:none">
+        <button type="button" onclick="toggleSenha()" id="btn-olho" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;color:var(--txt2);font-size:16px;padding:0;line-height:1">👁️</button>
+      </div></div>
+      <button class="btn" style="width:100%;margin-top:4px;padding:11px" onclick="fazerLogin()"><span id="login-txt">Entrar</span></button>
+      <div style="text-align:center;margin-top:14px;font-size:10px;color:var(--txt3)">© 2026 · MegaFllex Soluções · v0.2.0</div>
+    </div>
+  </div>
+</div>
+
+<!-- MEGAFLLEX -->
+<div id="s-mega" class="screen">
+  <div class="app"><div class="card">
+    <div class="topbar" style="background:var(--mega);border-radius:var(--rl) var(--rl) 0 0">
+      <button onclick="confirmarSaida()" class="btn-sair" style="border-color:var(--mega-brd);color:var(--mega-txt)">⬅ Sair</button>
+      <div class="avatar av-mega"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="20" height="20">
+  <defs>
+    <linearGradient id="face_icon0" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0A2A5E"></stop>
+      <stop offset="20%" stop-color="#1C57C9"></stop>
+      <stop offset="42%" stop-color="#6FA0EE"></stop>
+      <stop offset="50%" stop-color="#E8F1FF"></stop>
+      <stop offset="58%" stop-color="#6FA0EE"></stop>
+      <stop offset="80%" stop-color="#1C57C9"></stop>
+      <stop offset="100%" stop-color="#0A2A5E"></stop>
+    </linearGradient>
+    <linearGradient id="shade_icon0" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25"></stop>
+      <stop offset="60%" stop-color="#000000" stop-opacity="0"></stop>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.35"></stop>
+    </linearGradient>
+  </defs>
+  <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="#04122B" opacity="0.3" transform="translate(0 3)"></path>
+  <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="#04122B"></path>
+  <g transform="translate(32 33) scale(0.92) translate(-32 -33)">
+    <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="url(#face_icon0)"></path>
+    <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="url(#shade_icon0)"></path>
+  </g>
+  <path d="M18 46 L18 22 L26 22 L32 32 L38 22 L46 22 L46 46 L40 46 L40 30 L34 40 L30 40 L24 30 L24 46 Z" fill="#ffffff"></path>
+</svg></div>
+      <div class="topbar-info">
+        <div style="font-size:13px;font-weight:500;color:var(--mega-txt)">MegaFllex Auditoria</div>
+        <div style="font-size:10px;color:var(--mega-sub)" id="mega-user-nome">Administrador master</div>
+      </div>
+      <button onclick="abrirTrocarSenha()" title="Trocar senha" style="border:0.5px solid var(--mega-brd);background:var(--bg);border-radius:var(--r);cursor:pointer;padding:4px 8px;font-size:14px;color:var(--mega-txt)">🔑</button> <button onclick="ciclarTema()" id="btn-tema-topo" title="Alternar tema" style="border:0.5px solid var(--mega-brd);background:var(--bg);border-radius:var(--r);cursor:pointer;padding:4px 8px;font-size:14px;color:var(--mega-txt)">☀️</button>
+    </div>
+    <div class="inner">
+      <div class="tab-bar">
+        <button class="tab active" onclick="mTab('dashboard',this)">📊 Dashboard</button>
+        <button class="tab" onclick="mTab('empresas',this)">🏢 Empresas</button>
+        <button class="tab" onclick="mTab('lancamentos',this)">📋 Lançamentos</button>
+        <button class="tab" onclick="mTab('auditoria',this)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="20" height="20">
+  <defs>
+    <linearGradient id="face_icon1" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0A2A5E"></stop>
+      <stop offset="20%" stop-color="#1C57C9"></stop>
+      <stop offset="42%" stop-color="#6FA0EE"></stop>
+      <stop offset="50%" stop-color="#E8F1FF"></stop>
+      <stop offset="58%" stop-color="#6FA0EE"></stop>
+      <stop offset="80%" stop-color="#1C57C9"></stop>
+      <stop offset="100%" stop-color="#0A2A5E"></stop>
+    </linearGradient>
+    <linearGradient id="shade_icon1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25"></stop>
+      <stop offset="60%" stop-color="#000000" stop-opacity="0"></stop>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.35"></stop>
+    </linearGradient>
+  </defs>
+  <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="#04122B" opacity="0.3" transform="translate(0 3)"></path>
+  <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="#04122B"></path>
+  <g transform="translate(32 33) scale(0.92) translate(-32 -33)">
+    <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="url(#face_icon1)"></path>
+    <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="url(#shade_icon1)"></path>
+  </g>
+  <path d="M18 46 L18 22 L26 22 L32 32 L38 22 L46 22 L46 46 L40 46 L40 30 L34 40 L30 40 L24 30 L24 46 Z" fill="#ffffff"></path>
+</svg> Auditoria</button>
+        <button class="tab" onclick="mTab('campos',this)">⚙️ Campos</button>
+        <button class="tab" onclick="mTab('equipe',this)">👥 Equipe</button>
+        <button class="tab" onclick="mTab('backup',this)">💾 Backup</button>
+      </div>
+      <div id="m-dashboard">
+        <div class="grid4" id="m-dash-cards"></div>
+        <div class="sect">Resumo por empresa</div>
+        <div id="m-dash-emp"></div>
+      </div>
+      <div id="m-empresas" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap">
+          <div class="sect" style="margin:0">Empresas cadastradas</div>
+          <button class="btn" onclick="abrirModalEmpresa()" style="font-size:12px;padding:7px 12px">+ Nova empresa</button>
+        </div>
+        <div id="lista-empresas"></div>
+      </div>
+      <div id="m-lancamentos" style="display:none">
+        <div class="notice n-mega">Selecione empresa, filial e mês para visualizar os lançamentos.</div>
+        <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:8px">
+          <button class="btn" id="btn-zeros-mega" onclick="toggleZeros('mega')" style="font-size:11px;padding:5px 10px">👁️ Ocultar zeros</button>
+          <button class="btn" onclick="imprimirRelatorio('mega')" style="font-size:11px;padding:5px 10px">🖨️ Imprimir</button>
+        </div>
+        <div class="grid3" style="margin-bottom:10px">
+          <div class="irow" style="margin:0"><label>Empresa</label><select id="m-sel-emp" onchange="mAtualizaFiliais()"><option value="">Selecione...</option></select></div>
+          <div class="irow" style="margin:0"><label>Filial</label><select id="m-sel-fil" onchange="mCarregarLanc()"><option value="">Selecione...</option></select></div>
+          <div class="irow" style="margin:0"><label>Mês/Ano</label><select id="m-sel-mes" onchange="mCarregarLanc()"></select></div>
+        </div>
+        
+        <div class="legenda">
+          <div class="leg-item"><div class="leg-box" style="background:#FFF3CD;border-color:#E6A817"></div>Proprietário</div>
+          <div class="leg-item"><div class="leg-box" style="background:#FFD6D6;border-color:#D85A30"></div>Operador</div>
+          <div class="leg-item"><div class="leg-box" style="background:#EEEDFE;border-color:#AFA9EC"></div>Op. MegaFllex</div>
+          <div class="leg-item"><div class="leg-box" style="background:#D8EBFF;border-color:#5B9BD5"></div>MegaFllex Admin</div>
+        </div>
+        <div class="tbl-wrap"><table><thead id="m-lanc-head"></thead><tbody id="m-lanc-body"></tbody></table></div>
+      </div>
+      <div id="m-auditoria" style="display:none">
+        <div class="sect">Log global de todas as edições</div>
+        <div id="m-audit-lista"></div>
+      </div>
+      <div id="m-equipe" style="display:none">
+        <div class="notice n-mega">Cadastre aqui os <strong>Operadores MegaFllex</strong> — funcionários internos com acesso a todas as empresas.</div>
+        <div style="background:var(--bg2);border-radius:var(--rl);padding:14px;margin-bottom:12px">
+          <div class="sect" style="margin-top:0">Novo Operador MegaFllex</div>
+          <div class="grid2" style="margin-bottom:8px">
+            <div class="irow"><label>Nome completo</label><input type="text" id="eq-nome" placeholder="Ex: João Silva"></div>
+            <div class="irow"><label>E-mail</label><input type="email" id="eq-email" placeholder="joao@megafllex.com"></div>
+          </div>
+          <button class="btn" onclick="criarOpMega()" style="width:100%">+ Cadastrar Operador MegaFllex</button>
+          <div id="eq-fb" style="margin-top:8px;font-size:12px;display:none"></div>
+        </div>
+        <div class="sect">Operadores MegaFllex cadastrados</div>
+        <div id="eq-lista"></div>
+      </div>
+
+      <div id="m-backup" style="display:none">
+        <div class="notice n-mega">Somente administradores MegaFllex podem exportar dados. Os arquivos gerados ficam apenas no seu dispositivo.</div>
+        <div class="sect">Exportar tabelas</div>
+        <div id="m-backup-cards" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+          <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:0.5px solid var(--brd);border-radius:var(--r);background:var(--bg);cursor:pointer"><input type="checkbox" id="bk-lancamentos" checked style="width:14px;height:14px"> <span style="font-size:13px">📋 Lançamentos</span><span id="bk-ct-lancamentos" style="margin-left:auto;font-size:10px;color:var(--txt3)"></span></label>
+          <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:0.5px solid var(--brd);border-radius:var(--r);background:var(--bg);cursor:pointer"><input type="checkbox" id="bk-empresas" checked style="width:14px;height:14px"> <span style="font-size:13px">🏢 Empresas</span><span id="bk-ct-empresas" style="margin-left:auto;font-size:10px;color:var(--txt3)"></span></label>
+          <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:0.5px solid var(--brd);border-radius:var(--r);background:var(--bg);cursor:pointer"><input type="checkbox" id="bk-filiais" checked style="width:14px;height:14px"> <span style="font-size:13px">🏪 Filiais</span><span id="bk-ct-filiais" style="margin-left:auto;font-size:10px;color:var(--txt3)"></span></label>
+          <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:0.5px solid var(--brd);border-radius:var(--r);background:var(--bg);cursor:pointer"><input type="checkbox" id="bk-perfis" checked style="width:14px;height:14px"> <span style="font-size:13px">👥 Perfis</span><span id="bk-ct-perfis" style="margin-left:auto;font-size:10px;color:var(--txt3)"></span></label>
+          <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:0.5px solid var(--brd);border-radius:var(--r);background:var(--bg);cursor:pointer"><input type="checkbox" id="bk-campos" checked style="width:14px;height:14px"> <span style="font-size:13px">⚙️ Campos</span><span id="bk-ct-campos" style="margin-left:auto;font-size:10px;color:var(--txt3)"></span></label>
+          <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:0.5px solid var(--brd);border-radius:var(--r);background:var(--bg);cursor:pointer"><input type="checkbox" id="bk-audit_log" checked style="width:14px;height:14px"> <span style="font-size:13px">🛡️ Audit Log</span><span id="bk-ct-audit_log" style="margin-left:auto;font-size:10px;color:var(--txt3)"></span></label>
+        </div>
+        <div class="sect">Formato</div>
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+          <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:0.5px solid var(--brd);border-radius:var(--r);background:var(--bg);cursor:pointer;font-size:13px"><input type="radio" name="bk-fmt" value="json" checked> JSON <span style="font-size:10px;color:var(--txt3)">(completo)</span></label>
+          <label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:0.5px solid var(--brd);border-radius:var(--r);background:var(--bg);cursor:pointer;font-size:13px"><input type="radio" name="bk-fmt" value="csv"> CSV <span style="font-size:10px;color:var(--txt3)">(lançamentos)</span></label>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" onclick="executarBackup()" style="flex:1;min-width:160px;padding:11px;background:var(--mega);color:var(--mega-txt);border-color:var(--mega-brd)">⬇️ Baixar backup</button>
+          <button class="btn" onclick="renderBackup()" style="padding:11px 14px">🔄 Atualizar contagens</button>
+        </div>
+        <div id="bk-fb" style="margin-top:10px;font-size:12px;display:none"></div>
+        <div class="sect" style="margin-top:16px">Histórico desta sessão</div>
+        <div id="bk-historico" style="font-size:12px;color:var(--txt2)">Nenhum backup realizado nesta sessão.</div>
+
+        <div style="border-top:0.5px solid var(--brd);margin-top:18px;padding-top:14px">
+          <div class="sect" style="margin-top:0">Importar backup JSON</div>
+          <div class="notice n-warn" style="margin-bottom:10px">⚠️ A importação usa <strong>upsert</strong> — registros existentes com mesmo ID serão <strong>atualizados</strong>. Não apaga dados extras.</div>
+          <label style="display:flex;align-items:center;gap:10px;padding:12px;border:1.5px dashed var(--brd2);border-radius:var(--r);cursor:pointer;background:var(--bg2);margin-bottom:10px">
+            <span style="font-size:22px">📂</span>
+            <div>
+              <div style="font-size:13px;font-weight:500">Selecionar arquivo JSON</div>
+              <div style="font-size:11px;color:var(--txt3)" id="bk-imp-nome">Nenhum arquivo selecionado</div>
+            </div>
+            <input type="file" id="bk-imp-file" accept=".json" style="display:none" onchange="bkLerArquivo()">
+          </label>
+          <div id="bk-imp-preview" style="display:none;margin-bottom:10px">
+            <div class="sect" style="margin-top:0;margin-bottom:6px">Conteúdo do arquivo</div>
+            <div id="bk-imp-tabelas" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn" onclick="bkImportar()" style="flex:1;min-width:160px;padding:11px;background:#c0392b;color:#fff;border-color:#a93226">⬆️ Importar selecionadas</button>
+              <button class="btn" onclick="bkCancelarImp()" style="padding:11px 14px">✕ Cancelar</button>
+            </div>
+          </div>
+          <div id="bk-imp-prog" style="display:none;margin-bottom:6px"></div>
+          <div id="bk-imp-fb" style="font-size:12px;display:none;margin-top:6px"></div>
+        </div>
+      </div>
+      <div id="m-campos" style="display:none">
+        <div class="notice n-mega">Somente a MegaFllex pode adicionar ou remover campos.</div>
+        <div class="sect">Campos ativos</div>
+        <div id="m-campos-ativos" style="margin-bottom:12px"></div>
+        <div class="sect">Adicionar campo</div>
+        <div style="background:var(--bg2);border-radius:var(--rl);padding:14px;margin-bottom:10px">
+          <div class="grid3" style="margin-bottom:8px">
+            <div class="irow"><label>Nome</label><input type="text" id="m-novo-nome" placeholder="Ex: Cartão Elo"></div>
+            <div class="irow"><label>Grupo</label><select id="m-novo-grupo"><option>Pix</option><option>Carro Forte</option><option>Pagamentos</option><option>Cartões</option><option>Outros</option></select></div>
+            <div class="irow"><label>Tipo</label><select id="m-novo-tipo"><option value="moeda">Valor (R$)</option><option value="texto">Texto/ok</option></select></div>
+          </div>
+          <button class="btn" onclick="adicionarCampo()" style="width:100%">+ Adicionar campo</button>
+          <div id="m-campo-fb" style="margin-top:6px;font-size:11px;color:var(--pos);display:none"></div>
+        </div>
+      </div>
+    </div>
+    <div class="rodape">© 2026 · MegaFllex Soluções</div>
+  </div></div>
+</div>
+
+<!-- EMPRESA -->
+<div id="s-empresa" class="screen">
+  <div class="app"><div class="card" style="border-color:var(--prop-brd)">
+    <div class="topbar" style="background:var(--prop);border-radius:var(--rl) var(--rl) 0 0">
+      <button onclick="confirmarSaida()" class="btn-sair" style="border-color:var(--prop-brd);color:var(--prop-txt)">⬅ Sair</button>
+      <div class="avatar av-emp">🏢</div>
+      <div class="topbar-info">
+        <div style="font-size:13px;font-weight:500;color:var(--prop-txt)" id="emp-nome-top">Empresa</div>
+        <div style="font-size:10px;color:var(--prop-txt)">Proprietário · edições em laranja</div>
+      </div>
+      <button onclick="abrirTrocarSenha()" title="Trocar senha" style="border:0.5px solid var(--prop-brd);background:var(--bg);border-radius:var(--r);cursor:pointer;padding:4px 8px;font-size:14px;color:var(--prop-txt)">🔑</button> <button onclick="ciclarTema()" id="btn-tema-emp" title="Alternar tema" style="border:0.5px solid var(--prop-brd);background:var(--bg);border-radius:var(--r);cursor:pointer;padding:4px 8px;font-size:14px;color:var(--prop-txt)">☀️</button>
+    </div>
+    <div class="inner">
+      <div class="tab-bar">
+        <button class="tab active" onclick="eTab('lancamentos',this)">📋 Lançamentos</button>
+        <button class="tab" onclick="eTab('auditoria',this)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="20" height="20">
+  <defs>
+    <linearGradient id="face_icon2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0A2A5E"></stop>
+      <stop offset="20%" stop-color="#1C57C9"></stop>
+      <stop offset="42%" stop-color="#6FA0EE"></stop>
+      <stop offset="50%" stop-color="#E8F1FF"></stop>
+      <stop offset="58%" stop-color="#6FA0EE"></stop>
+      <stop offset="80%" stop-color="#1C57C9"></stop>
+      <stop offset="100%" stop-color="#0A2A5E"></stop>
+    </linearGradient>
+    <linearGradient id="shade_icon2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25"></stop>
+      <stop offset="60%" stop-color="#000000" stop-opacity="0"></stop>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.35"></stop>
+    </linearGradient>
+  </defs>
+  <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="#04122B" opacity="0.3" transform="translate(0 3)"></path>
+  <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="#04122B"></path>
+  <g transform="translate(32 33) scale(0.92) translate(-32 -33)">
+    <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="url(#face_icon2)"></path>
+    <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="url(#shade_icon2)"></path>
+  </g>
+  <path d="M18 46 L18 22 L26 22 L32 32 L38 22 L46 22 L46 46 L40 46 L40 30 L34 40 L30 40 L24 30 L24 46 Z" fill="#ffffff"></path>
+</svg> Minhas edições</button>
+      </div>
+      <div id="e-lancamentos">
+        <div class="notice n-warn">Suas edições ficam em <strong>laranja</strong> e registradas na <strong>MegaFllex Auditoria</strong>.</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+          <div class="legenda" style="margin:0">
+            <div class="leg-item"><div class="leg-box" style="background:#FFF3CD;border-color:#E6A817"></div>Editado por você</div>
+            <div class="leg-item"><div class="leg-box" style="background:#FFD6D6;border-color:#D85A30"></div>Pelo operador</div>
+            <div class="leg-item"><div class="leg-box" style="background:#EEEDFE;border-color:#AFA9EC"></div>Op. MegaFllex</div>
+            <div class="leg-item"><div class="leg-box" style="background:#D8EBFF;border-color:#5B9BD5"></div>MegaFllex Admin</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn" id="btn-zeros-emp" onclick="toggleZeros('emp')" style="font-size:11px;padding:5px 10px">👁️ Ocultar zeros</button>
+            <button class="btn" onclick="imprimirRelatorio('empresa')" style="font-size:11px;padding:5px 10px">🖨️ Imprimir</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:flex-end">
+          <div class="irow" style="margin:0;flex:1;min-width:130px"><label>Filial</label><select id="e-sel-fil" onchange="eCarregarLanc()"></select></div>
+          <div class="irow" style="margin:0;flex:1;min-width:130px"><label>Mês/Ano</label><select id="e-sel-mes" onchange="eCarregarLanc()"></select></div>
+        </div>
+        <div class="tbl-wrap"><table><thead id="e-lanc-head"></thead><tbody id="e-lanc-body"></tbody></table></div>
+      </div>
+      <div id="e-auditoria" style="display:none">
+        <div class="notice n-warn">Todas as suas edições são visíveis para a <strong>MegaFllex Auditoria</strong>.</div>
+        <div class="sect">Suas edições registradas</div>
+        <div id="e-audit-lista"></div>
+      </div>
+    </div>
+    <div class="rodape">© 2026 · MegaFllex Soluções</div>
+  </div></div>
+</div>
+
+<!-- FILIAL -->
+<div id="s-filial" class="screen">
+  <div class="app"><div class="card" style="border-color:var(--oper-brd)">
+    <div class="topbar" style="background:var(--oper);border-radius:var(--rl) var(--rl) 0 0">
+      <button onclick="confirmarSaida()" class="btn-sair" style="border-color:var(--oper-brd);color:var(--oper-txt)">⬅ Sair</button>
+      <div class="avatar av-fil">👤</div>
+      <div class="topbar-info">
+        <div style="font-size:13px;font-weight:500;color:var(--oper-txt)" id="fil-nome-top">Operador</div>
+        <div style="font-size:10px;color:var(--oper-txt)" id="fil-emp-top">Filial</div>
+      </div>
+      <button onclick="abrirTrocarSenha()" title="Trocar senha" style="border:0.5px solid var(--oper-brd);background:var(--bg);border-radius:var(--r);cursor:pointer;padding:4px 8px;font-size:14px;color:var(--oper-txt)">🔑</button> <button onclick="ciclarTema()" id="btn-tema-fil" title="Alternar tema" style="border:0.5px solid var(--oper-brd);background:var(--bg);border-radius:var(--r);cursor:pointer;padding:4px 8px;font-size:14px;color:var(--oper-txt)">☀️</button>
+    </div>
+    <div class="inner">
+      <div class="tab-bar">
+        <button class="tab active" onclick="fTab('lancar',this)">+ Lançar dia</button>
+        <button class="tab" onclick="fTab('historico',this)">📋 Histórico</button>
+      </div>
+      <div id="f-lancar">
+        <div class="notice n-oper" id="f-notice-filial">Lançamentos identificados pela <strong>MegaFllex Auditoria</strong>.</div>
+        <div class="irow" style="margin-bottom:10px"><label>Data</label><input type="date" id="f-data"></div>
+        <div id="f-form-campos"></div>
+        <button class="btn" style="width:100%;margin-top:4px;padding:12px" onclick="salvarLanc()">💾 Salvar lançamento</button>
+        <div id="f-fb" style="margin-top:8px;font-size:12px;color:var(--pos);display:none">✅ Lançamento salvo!</div>
+      </div>
+      <div id="f-historico" style="display:none">
+        <div class="notice n-oper">Suas correções ficam em <strong>vermelho</strong> e registradas na <strong>MegaFllex Auditoria</strong>.</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+          <div class="legenda" style="margin:0">
+            <div class="leg-item"><div class="leg-box" style="background:#FFD6D6;border-color:#D85A30"></div>Editado por você</div>
+            <div class="leg-item"><div class="leg-box" style="background:#FFF3CD;border-color:#E6A817"></div>Pelo proprietário</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn" id="btn-zeros-fil" onclick="toggleZeros('fil')" style="font-size:11px;padding:5px 10px">👁️ Ocultar zeros</button>
+            <button class="btn" onclick="imprimirRelatorio('filial')" style="font-size:11px;padding:5px 10px">🖨️ Imprimir</button>
+          </div>
+        </div>
+        <div class="irow" style="margin-bottom:10px"><label>Mês/Ano</label><select id="f-sel-mes" onchange="fCarregarHist()"></select></div>
+        <div class="tbl-wrap"><table><thead id="f-hist-head"></thead><tbody id="f-hist-body"></tbody></table></div>
+      </div>
+    </div>
+    <div class="rodape">© 2026 · MegaFllex Soluções</div>
+  </div></div>
+</div>
+
+<!-- OPERADOR MEGAFLLEX -->
+<div id="s-opmega" class="screen">
+  <div class="app"><div class="card" style="border-color:#5B9BD5">
+    <div class="topbar" style="background:#E6F1FB;border-radius:var(--rl) var(--rl) 0 0">
+      <button onclick="confirmarSaida()" class="btn-sair" style="border-color:#5B9BD5;color:#185FA5">⬅ Sair</button>
+      <div class="avatar" style="background:#E6F1FB;color:#185FA5">⚙️</div>
+      <div class="topbar-info">
+        <div style="font-size:13px;font-weight:500;color:#185FA5" id="opmega-nome-top">Operador MegaFllex</div>
+        <div style="font-size:10px;color:#185FA5">Acesso a todas as empresas</div>
+      </div>
+      <button onclick="abrirTrocarSenha()" title="Trocar senha" style="border:0.5px solid #5B9BD5;background:var(--bg);border-radius:var(--r);cursor:pointer;padding:4px 8px;font-size:14px;color:#185FA5">🔑</button> <button onclick="ciclarTema()" style="border:0.5px solid #5B9BD5;background:var(--bg);border-radius:var(--r);cursor:pointer;padding:4px 8px;font-size:14px;color:#185FA5" id="btn-tema-opmega">☀️</button>
+    </div>
+    <div class="inner">
+      <div class="tab-bar">
+        <button class="tab active" onclick="omTab('lancamentos',this)">📋 Lançamentos</button>
+        <button class="tab" onclick="omTab('auditoria',this)"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="20" height="20">
+  <defs>
+    <linearGradient id="face_icon3" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0A2A5E"></stop>
+      <stop offset="20%" stop-color="#1C57C9"></stop>
+      <stop offset="42%" stop-color="#6FA0EE"></stop>
+      <stop offset="50%" stop-color="#E8F1FF"></stop>
+      <stop offset="58%" stop-color="#6FA0EE"></stop>
+      <stop offset="80%" stop-color="#1C57C9"></stop>
+      <stop offset="100%" stop-color="#0A2A5E"></stop>
+    </linearGradient>
+    <linearGradient id="shade_icon3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25"></stop>
+      <stop offset="60%" stop-color="#000000" stop-opacity="0"></stop>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.35"></stop>
+    </linearGradient>
+  </defs>
+  <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="#04122B" opacity="0.3" transform="translate(0 3)"></path>
+  <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="#04122B"></path>
+  <g transform="translate(32 33) scale(0.92) translate(-32 -33)">
+    <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="url(#face_icon3)"></path>
+    <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="url(#shade_icon3)"></path>
+  </g>
+  <path d="M18 46 L18 22 L26 22 L32 32 L38 22 L46 22 L46 46 L40 46 L40 30 L34 40 L30 40 L24 30 L24 46 Z" fill="#ffffff"></path>
+</svg> Auditoria</button>
+      </div>
+      <div id="om-lancamentos">
+        <div class="notice" style="background:#E6F1FB;color:#185FA5">Selecione a empresa e filial para lançar ou visualizar.</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:flex-end">
+          <div class="irow" style="margin:0;flex:1;min-width:130px"><label>Empresa</label>
+            <select id="om-sel-emp" onchange="omAtualizaFiliais();document.getElementById('om-area-lancar').style.display='none';"><option value="">Selecione...</option></select>
+          </div>
+          <div class="irow" style="margin:0;flex:1;min-width:130px"><label>Filial</label>
+            <select id="om-sel-fil" onchange="omCarregarLanc()"><option value="">Selecione...</option></select>
+          </div>
+          <div class="irow" style="margin:0;flex:1;min-width:130px"><label>Mês/Ano</label>
+            <select id="om-sel-mes" onchange="omCarregarLanc()"></select>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+          <div class="legenda" style="margin:0">
+            <div class="leg-item"><div class="leg-box" style="background:#FFF3CD;border-color:#E6A817"></div>Proprietário</div>
+            <div class="leg-item"><div class="leg-box" style="background:#FFD6D6;border-color:#D85A30"></div>Operador</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn" id="btn-zeros-opmega" onclick="toggleZeros('opmega')" style="font-size:11px;padding:5px 10px">👁️ Ocultar zeros</button>
+            <button class="btn" onclick="imprimirRelatorio('opmega')" style="font-size:11px;padding:5px 10px">🖨️ Imprimir</button>
+          </div>
+        </div>
+        <div class="tbl-wrap"><table><thead id="om-lanc-head"></thead><tbody id="om-lanc-body"></tbody></table></div>
+        <div id="om-area-lancar" style="margin-top:10px;display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <div class="sect" style="margin:0">Lançar novo dia</div>
+            <button class="btn" style="font-size:11px;padding:5px 12px;background:var(--mega);color:var(--mega-txt);border-color:var(--mega-brd)" onclick="omSalvarLanc()">💾 Salvar</button>
+          </div>
+          <div class="notice n-oper">Lançamentos como <strong>Operador MegaFllex</strong> — registrados na auditoria.</div>
+          <div class="irow"><label>Data</label><input type="date" id="om-data" onchange="omPreencherData()"></div>
+          <div id="om-data-fb" style="display:none;align-items:center;gap:6px;padding:7px 10px;border-radius:var(--r);background:#E6F1FB;color:#185FA5;font-size:11px;margin-bottom:4px">📋 <strong>Lançamento existente carregado</strong> — edite e salve para atualizar.</div>
+          <div id="om-form-campos"></div>
+          <button class="btn" style="width:100%;margin-top:4px;padding:12px" onclick="omSalvarLanc()">💾 Salvar lançamento</button>
+          <div id="om-fb" style="margin-top:8px;font-size:12px;color:var(--pos);display:none">✅ Lançamento salvo!</div>
+        </div>
+      </div>
+      <div id="om-auditoria" style="display:none">
+        <div class="sect">Log de auditoria global</div>
+        <div id="om-audit-lista"></div>
+      </div>
+    </div>
+    <div class="rodape">© 2026 · MegaFllex Soluções</div>
+  </div></div>
+</div>
+
+<!-- EDIÇÃO -->
+<div id="s-edit" class="screen">
+  <div class="app"><div class="card" id="edit-outer">
+    <div class="topbar" id="edit-topbar">
+      <button id="edit-back-btn" class="btn-sair">⬅ Voltar</button>
+      <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">Editar lançamento</div></div>
+      <span id="edit-badge"></span>
+    </div>
+    <div class="inner">
+      <div id="edit-notice" class="notice"></div>
+      <div id="edit-campos-form"></div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button id="edit-cancel-btn" class="btn" style="flex:1;color:var(--txt2)">Cancelar</button>
+        <button id="edit-save-btn" class="btn" style="flex:1">💾 Salvar edição</button>
+      </div>
+    </div>
+    <div class="rodape">© 2026 · MegaFllex Soluções</div>
+  </div></div>
+</div>
+
+<div id="modal-root"></div>
+<div id="obs-tip" class="obs-tip"></div>
+
+<script>
+const SURL='https://evqvkosqxdowjlbwkuwo.supabase.co';
+const SKEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2cXZrb3NxeGRvd2psYndrdXdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMTE5MTMsImV4cCI6MjA5NDU4NzkxM30.ZtD4YIwZdAgO0YHcN8IJ8BX9-6DKcL1dE9RnzqpvkGI';
+const sb=supabase.createClient(SURL,SKEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:false}});
+
+let uAt=null,pAt=null,empC=[],camC=[];
+let eLancId=null,eOrig=null,eQuem='';
+const zeros={fil:false,emp:false,mega:false,opmega:false};
+let omLancData=[];
+
+function agr(){return new Date(new Date().toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));}
+function hoje(){const d=agr();return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());}
+function mesAtual(){const d=agr();return p2(d.getMonth()+1)+'/'+d.getFullYear();}
+function p2(n){return String(n).padStart(2,'0');}
+function meses(){const l=[],d=agr();for(let i=5;i>=0;i--){const t=new Date(d.getFullYear(),d.getMonth()-i,1);l.push(p2(t.getMonth()+1)+'/'+t.getFullYear());}for(let i=1;i<=3;i++){const t=new Date(d.getFullYear(),d.getMonth()+i,1);l.push(p2(t.getMonth()+1)+'/'+t.getFullYear());}return l;}
+const MESES=meses();
+
+function mBRL(el){
+  const aplicarCor=()=>{const v=pBRL(el.value);el.style.color=v<0?'#c0392b':v>0?'#1D9E75':'';el.style.fontWeight=v!==0?'500':'';};
+  el.addEventListener('input',()=>{
+    const raw=el.value;
+    const trailingMinus=raw.trimEnd().endsWith('-')&&!raw.trim().startsWith('-');
+    const n=raw.trim().startsWith('-');
+    let d=raw.replace(/\D/g,'');
+    if(!d){el.value=(n||trailingMinus)?'-':'';aplicarCor();return;}
+    const formatted=(n?'-':'')+(parseInt(d)/100).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+    el.value=formatted+(trailingMinus?'-':'');
+    aplicarCor();
+  });
+  // Sinal negativo no final: "1,00-" → "-1,00"
+  el.addEventListener('blur',()=>{
+    const raw=el.value.trim();
+    if(raw.endsWith('-')&&raw.length>1){
+      const semSinal=raw.slice(0,-1).replace(/^-/,'');
+      const d=semSinal.replace(/\D/g,'');
+      if(d){const neg=-(parseInt(d)/100);el.value=fBRL(neg);aplicarCor();}
+    }
+  });
+  // Aplicar cor imediatamente ao valor já carregado
+  aplicarCor();
+  return aplicarCor;
+}
+function pBRL(s){if(!s||s==='')return 0;return parseFloat(String(s).replace(/\./g,'').replace(',','.'))||0;}
+function fBRL(v){if(!v)return'';const s=Math.abs(v).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');return(v<0?'-':'')+s;}
+function fR(v){if(v===0||v===null||v===undefined)return'ok';if(typeof v==='string')return v;const s=Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});return(v<0?'-R$ ':'R$ ')+s;}
+function fT(v){if(typeof v!=='number')return'R$ 0,00';const s=Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});return(v<0?'-R$ ':'R$ ')+s;}
+function cls(v){if(typeof v==='string')return'neu';return v>0?'pos':v<0?'neg':'neu';}
+function mDA(d){const p=d.split('-');return p[1]+'/'+p[0];}
+function ld(t){return'<span class="spinner"></span>'+(t||'Carregando...');}
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
+function abrirModal(h){document.getElementById('modal-root').innerHTML='<div class="modal-backdrop" onclick="fFundo(event)">'+h+'</div>';}
+function fecharModal(){document.getElementById('modal-root').innerHTML='';}
+function fFundo(e){if(e.target.classList.contains('modal-backdrop'))fecharModal();}
+function mascaraCNPJ(el){let v=el.value.replace(/\D/g,'').slice(0,14);if(v.length>12)v=v.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5');else if(v.length>8)v=v.replace(/(\d{2})(\d{3})(\d{3})(\d+)/,'$1.$2.$3/$4');else if(v.length>5)v=v.replace(/(\d{2})(\d{3})(\d+)/,'$1.$2.$3');else if(v.length>2)v=v.replace(/(\d{2})(\d+)/,'$1.$2');el.value=v;}
+
+// AUTH
+// RESET DE SENHA
+function abrirTrocarSenha(){
+  abrirModal(
+    '<div class="modal-box">'+
+    '<div class="modal-handle"></div>'+
+    '<div class="modal-header"><h3>🔑 Trocar senha</h3><button onclick="fecharModal()" style="border:none;background:none;cursor:pointer;font-size:18px;color:var(--txt2)">×</button></div>'+
+    '<div class="irow"><label>Nova senha</label>'+
+    '<div style="position:relative">'+
+    '<input type="password" id="ts-nova" placeholder="Mínimo 6 caracteres" style="width:100%;padding:8px 38px 8px 10px;border:0.5px solid var(--brd2);border-radius:var(--r);background:var(--bg);color:var(--txt);font-size:14px;font-family:inherit">'+
+    '<button type="button" onclick="toggleTsSenha(\'ts-nova\',\'ts-olho1\')" id="ts-olho1" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;font-size:15px;color:var(--txt2);padding:0">👁️</button>'+
+    '</div></div>'+
+    '<div class="irow" style="margin-top:6px"><label>Confirmar nova senha</label>'+
+    '<div style="position:relative">'+
+    '<input type="password" id="ts-conf" placeholder="Repita a nova senha" style="width:100%;padding:8px 38px 8px 10px;border:0.5px solid var(--brd2);border-radius:var(--r);background:var(--bg);color:var(--txt);font-size:14px;font-family:inherit">'+
+    '<button type="button" onclick="toggleTsSenha(\'ts-conf\',\'ts-olho2\')" id="ts-olho2" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;font-size:15px;color:var(--txt2);padding:0">👁️</button>'+
+    '</div></div>'+
+    '<div id="ts-fb" style="margin-top:8px;font-size:12px;display:none"></div>'+
+    '<div class="modal-footer">'+
+    '<button class="btn" style="flex:1;background:var(--bg2)" onclick="fecharModal()">Cancelar</button>'+
+    '<button class="btn" style="flex:1;background:var(--mega);color:var(--mega-txt);border-color:var(--mega-brd)" onclick="salvarNovaSenha()">💾 Salvar senha</button>'+
+    '</div>'+
+    '</div>'
+  );
+}
+function toggleTsSenha(inputId,btnId){
+  const el=document.getElementById(inputId);
+  const btn=document.getElementById(btnId);
+  if(!el)return;
+  const show=el.type==='password';
+  el.type=show?'text':'password';
+  if(btn)btn.textContent=show?'🙈':'👁️';
+}
+async function salvarNovaSenha(){
+  const nova=document.getElementById('ts-nova')?.value||'';
+  const conf=document.getElementById('ts-conf')?.value||'';
+  const fb=document.getElementById('ts-fb');
+  const show=(msg,ok)=>{fb.style.display='block';fb.style.color=ok?'var(--pos)':'var(--neg)';fb.textContent=msg;};
+  if(nova.length<6){show('A senha deve ter pelo menos 6 caracteres.',false);return;}
+  if(nova!==conf){show('As senhas não coincidem.',false);return;}
+  const btn=document.querySelector('#modal-root .modal-box .btn:last-child');
+  if(btn){btn.disabled=true;btn.textContent='Salvando...';}
+  const {error}=await sb.auth.updateUser({password:nova});
+  if(error){show('Erro: '+error.message,false);if(btn){btn.disabled=false;btn.textContent='💾 Salvar senha';}return;}
+  show('✅ Senha alterada com sucesso!',true);
+  setTimeout(()=>fecharModal(),1800);
+}
+function infoResetSenha(empNome){
+  abrirModal('<div class="modal-box" onclick="event.stopPropagation()">'+
+    '<div class="modal-handle"></div>'+
+    '<div class="modal-header"><h3>🔑 Resetar senha</h3></div>'+
+    '<div class="notice n-mega">Informe o e-mail do usuário de <strong>'+empNome+'</strong> para enviar o link de redefinição:</div>'+
+    '<div class="irow" style="margin-top:8px"><label>E-mail do usuário</label><input type="email" id="reset-email" placeholder="email@dominio.com" style="padding:8px 10px;border:0.5px solid var(--brd2);border-radius:var(--r);background:var(--bg);color:var(--txt);font-size:14px;width:100%;font-family:inherit"></div>'+
+    '<div class="modal-footer">'+
+    '<button class="btn" style="flex:1;color:var(--txt2)" onclick="fecharModal()">Cancelar</button>'+
+    '<button class="btn" style="flex:1" onclick="enviarResetSenha()">📧 Enviar link</button>'+
+    '</div>'+
+    '<div id="reset-fb" style="margin-top:8px;font-size:12px;display:none"></div>'+
+  '</div>');
+}
+async function enviarResetSenha(){
+  const email=document.getElementById('reset-email')?.value?.trim();
+  const fb=document.getElementById('reset-fb');
+  if(!email){alert('Informe o e-mail');return;}
+  fb.style.display='block';fb.style.color='var(--txt2)';fb.textContent='⏳ Enviando...';
+  const {error}=await sb.auth.resetPasswordForEmail(email,{
+    redirectTo:window.location.origin+window.location.pathname
+  });
+  if(error){fb.style.color='var(--neg)';fb.textContent='❌ '+error.message;}
+  else{fb.style.color='var(--pos)';fb.textContent='✅ Link enviado para '+email+'!';}
+}
+
+// GERA SENHA ALEATÓRIA FORTE
+function geraSenha(){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+  let s='';
+  // Garantir pelo menos 1 de cada tipo
+  s+=chars[Math.floor(Math.random()*26)]; // maiúscula
+  s+=chars[26+Math.floor(Math.random()*26)]; // minúscula
+  s+=chars[52+Math.floor(Math.random()*8)]; // número
+  s+=chars[60+Math.floor(Math.random()*4)]; // especial
+  for(let i=4;i<12;i++) s+=chars[Math.floor(Math.random()*chars.length)];
+  return s.split('').sort(()=>Math.random()-0.5).join('');
+}
+
+// TEMA
+function setTema(tema){
+  try{localStorage.setItem('megafllex_tema', tema);}catch(e){}
+  if(document.documentElement)document.documentElement.setAttribute('data-tema', tema);
+  const icons={claro:'☀️',escuro:'🌙',sistema:'⚙️'};
+  // Atualizar botão do topo se existir
+  ['btn-tema-topo','btn-tema-emp','btn-tema-fil','btn-tema-opmega'].forEach(id=>{
+    const b=document.getElementById(id);if(b)b.textContent=icons[tema]||'☀️';
+  });
+  // Destacar botão ativo no login
+  ['claro','escuro','sistema'].forEach(t=>{
+    const btn=document.getElementById('btn-'+t);
+    if(btn){
+      btn.style.background=t===tema?'var(--mega)':'var(--bg2)';
+      btn.style.color=t===tema?'var(--mega-txt)':'var(--txt2)';
+      btn.style.borderColor=t===tema?'var(--mega-brd)':'var(--brd2)';
+      btn.style.fontWeight=t===tema?'600':'400';
+    }
+  });
+}
+function ciclarTema(){
+  const atual=localStorage.getItem('megafllex_tema')||'sistema';
+  const ordem=['claro','escuro','sistema'];
+  const prox=ordem[(ordem.indexOf(atual)+1)%3];
+  setTema(prox);
+}
+function carregarTema(){
+  const tema=localStorage.getItem('megafllex_tema')||'sistema';
+  setTema(tema);
+}
+
+function toggleSenha(){
+  const el=document.getElementById('l-senha');
+  const btn=document.getElementById('btn-olho');
+  if(el.type==='password'){el.type='text';btn.textContent='🙈';}
+  else{el.type='password';btn.textContent='👁️';}
+}
+async function fazerLogin(){
+  const email=document.getElementById('l-email').value.trim();
+  const senha=document.getElementById('l-senha').value;
+  const btn=document.getElementById('login-txt');
+  const erro=document.getElementById('login-erro');
+  erro.style.display='none';
+  if(!email||!senha){erro.textContent='❌ Preencha e-mail e senha';erro.style.display='flex';return;}
+  btn.innerHTML=ld('Entrando...');
+  try{
+    const {data,error}=await sb.auth.signInWithPassword({email,password:senha});
+    if(error){btn.textContent='Entrar';erro.textContent='❌ '+error.message;erro.style.display='flex';return;}
+    uAt=data.user;
+    await carregarPerfil();
+  }catch(e){btn.textContent='Entrar';erro.textContent='❌ '+e.message;erro.style.display='flex';}
+}
+
+async function carregarPerfil(){
+  const {data,error}=await sb.from('perfis').select('*').eq('user_id',uAt.id).limit(1);
+  const btn=document.getElementById('login-txt');
+  const erro=document.getElementById('login-erro');
+  if(error){btn.textContent='Entrar';erro.textContent='❌ '+error.message;erro.style.display='flex';await sb.auth.signOut();return;}
+  const d=data&&data.length>0?data[0]:null;
+  if(!d){btn.textContent='Entrar';erro.textContent='❌ Perfil não encontrado. Contate a MegaFllex.';erro.style.display='flex';await sb.auth.signOut();return;}
+  pAt=d;btn.textContent='Entrar';
+  await carregarCampos();
+  if(d.papel==='megafllex')await iniciarMega();
+  else if(d.papel==='op_mega')await iniciarOpMega();
+  else if(d.papel==='proprietario')await iniciarEmpresa();
+  else await iniciarFilial();
+}
+
+async function confirmarSaida(){
+  abrirModal('<div class="modal-box" onclick="event.stopPropagation()"><div class="modal-handle"></div><div class="modal-header"><h3>Sair do sistema</h3></div><div style="font-size:13px;color:var(--txt2);margin-bottom:4px">Deseja encerrar sua sessão?</div><div class="modal-footer"><button class="btn" style="flex:1;color:var(--txt2)" onclick="fecharModal()">Cancelar</button><button class="btn-danger" style="flex:1" onclick="logout()">⬅ Sair</button></div></div>');
+}
+async function logout(){await sb.auth.signOut();fecharModal();uAt=null;pAt=null;show('s-login');}
+
+async function carregarCampos(){const {data}=await sb.from('campos').select('*').eq('ativo',true).order('ordem');camC=data||[];}
+
+// MEGAFLLEX
+async function iniciarMega(){
+  document.getElementById('mega-user-nome').textContent=pAt.nome||'Administrador';
+  const {data}=await sb.from('empresas').select('*, filiais(*)').eq('ativa',true);
+  empC=data||[];
+  preSelMega();await renderDash();renderEmps();renderCampos();
+  show('s-mega');
+}
+// OPERADOR MEGAFLLEX
+async function iniciarOpMega(){
+  document.getElementById('opmega-nome-top').textContent=pAt.nome||'Operador MegaFllex';
+  const {data}=await sb.from('empresas').select('*, filiais(*)').eq('ativa',true);
+  empC=data||[];
+  document.getElementById('om-sel-emp').innerHTML='<option value="">Selecione...</option>'+empC.map(e=>'<option value="'+e.id+'">'+e.nome+'</option>').join('');
+  const sm=document.getElementById('om-sel-mes');
+  sm.innerHTML=MESES.map(m=>'<option value="'+m+'">'+m+'</option>').join('');
+  sm.value=mesAtual();
+  document.getElementById('om-data').value=hoje();
+  renderFormOpMega();
+  const tema=localStorage.getItem('megafllex_tema')||'sistema';
+  const icons={claro:'☀️',escuro:'🌙',sistema:'⚙️'};
+  const btnT=document.getElementById('btn-tema-opmega');
+  if(btnT)btnT.textContent=icons[tema];
+  show('s-opmega');
+}
+function omAtualizaFiliais(){
+  const eId=document.getElementById('om-sel-emp').value;
+  const emp=empC.find(e=>e.id===eId);
+  document.getElementById('om-sel-fil').innerHTML=emp
+    ?'<option value="">Selecione...</option>'+(emp.filiais||[]).map(f=>'<option value="'+f.id+'">'+f.nome+'</option>').join('')
+    :'<option value="">Selecione a empresa primeiro</option>';
+}
+async function omCarregarLanc(){
+  const fId=document.getElementById('om-sel-fil').value;
+  const mes=document.getElementById('om-sel-mes').value;
+  if(!fId||!mes){return;}
+  document.getElementById('om-lanc-body').innerHTML='<tr><td colspan="10">'+ld('Buscando...')+'</td></tr>';
+  try{
+    const {data,error}=await sb.from('lancamentos').select('*').eq('filial_id',fId).eq('mes_ano',mes).order('data_lanc');
+    if(error)throw error;
+    omLancData=data||[];
+    await buildTable(document.getElementById('om-lanc-head'),document.getElementById('om-lanc-body'),omLancData,true,'opmega');
+    // Mostrar área de lançar novo dia após buscar
+    document.getElementById('om-area-lancar').style.display='block';
+    omPreencherData();
+  }catch(e){
+    document.getElementById('om-lanc-body').innerHTML='<tr><td colspan="10" style="text-align:center;padding:16px;color:var(--neg)">Erro ao buscar: '+e.message+'</td></tr>';
+  }
+}
+function omPreencherData(){
+  const dv=document.getElementById('om-data').value;
+  if(!dv)return;
+  const lanc=omLancData.find(l=>l.data_lanc===dv);
+  const fb=document.getElementById('om-data-fb');
+  if(!lanc){
+    if(fb)fb.style.display='none';
+    // limpar campos
+    camC.forEach(c=>{const el=document.getElementById('om-fl-'+c.id);if(!el)return;el.value=c.tipo==='moeda'?'':'ok';if(c.tipo==='moeda'){el.style.color='';el.style.fontWeight='';}});
+    return;
+  }
+  const vs=lanc.valores||{};
+  camC.forEach(c=>{
+    const el=document.getElementById('om-fl-'+c.id);if(!el)return;
+    const v=vs[c.label];
+    if(c.tipo==='moeda'){
+      const n=parseFloat(v)||0;
+      el.value=fBRL(n);
+      el.style.color=n<0?'#c0392b':n>0?'#1D9E75':'';
+      el.style.fontWeight=n!==0?'500':'';
+    }else{el.value=v||'ok';}
+  });
+  if(fb){fb.style.display='flex';}
+}
+function renderFormOpMega(){
+  const g={};camC.forEach(c=>{if(!g[c.grupo])g[c.grupo]=[];g[c.grupo].push(c);});
+  let h='';
+  Object.entries(g).forEach(([gr,cs])=>{
+    h+='<div class="grupo-titulo">📁 '+gr+'</div><div class="grid2">';
+    cs.forEach(c=>{h+='<div class="irow"><label>'+c.label+'</label>'+(c.tipo==='moeda'?'<div class="input-brl"><span class="prefix">R$</span><input type="text" id="om-fl-'+c.id+'" placeholder="0,00" inputmode="decimal"></div>':'<input type="text" id="om-fl-'+c.id+'" placeholder="ok">')+'</div>';});
+    h+='</div>';
+  });
+  document.getElementById('om-form-campos').innerHTML=h;
+  camC.filter(c=>c.tipo==='moeda').forEach(c=>{const el=document.getElementById('om-fl-'+c.id);if(el)mBRL(el);});
+}
+async function omSalvarLanc(){
+  const eId=document.getElementById('om-sel-emp').value;
+  const fId=document.getElementById('om-sel-fil').value;
+  const dv=document.getElementById('om-data').value;
+  if(!eId||!fId){alert('Selecione empresa e filial');return;}
+  if(!dv){alert('Informe a data');return;}
+  const mesAno=mDA(dv);
+  const valores={};let total=0;
+  camC.forEach(c=>{const el=document.getElementById('om-fl-'+c.id);if(!el)return;const v=c.tipo==='moeda'?pBRL(el.value):(el.value||'ok');valores[c.label]=String(v);if(c.tipo==='moeda')total+=parseFloat(v)||0;});
+  const {error}=await sb.from('lancamentos').upsert({empresa_id:eId,filial_id:fId,mes_ano:mesAno,data_lanc:dv,valores,total_dif:total,criado_por:uAt.id},{onConflict:'filial_id,data_lanc'});
+  if(error){alert('Erro: '+error.message);return;}
+  const fb=document.getElementById('om-fb');fb.style.display='block';setTimeout(()=>fb.style.display='none',2500);
+  await omCarregarLanc();
+}
+function omTab(t,btn){
+  document.querySelectorAll('#s-opmega .tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  ['lancamentos','auditoria'].forEach(x=>document.getElementById('om-'+x).style.display='none');
+  document.getElementById('om-'+t).style.display='block';
+  if(t==='auditoria'){const el=document.getElementById('om-audit-lista');el.innerHTML=ld('Carregando...');sb.from('audit_log').select('*').order('editado_em',{ascending:false}).limit(50).then(({data})=>el.innerHTML=buildAuditHtml(data||[]));}
+}
+function preSelMega(){
+  document.getElementById('m-sel-emp').innerHTML='<option value="">Selecione...</option>'+empC.map(e=>'<option value="'+e.id+'">'+e.nome+'</option>').join('');
+  const sm=document.getElementById('m-sel-mes');
+  sm.innerHTML=MESES.map(m=>'<option value="'+m+'">'+m+'</option>').join('');
+  sm.value=mesAtual();
+}
+function mAtualizaFiliais(){
+  const eId=document.getElementById('m-sel-emp').value;
+  const emp=empC.find(e=>e.id===eId);
+  document.getElementById('m-sel-fil').innerHTML=emp?'<option value="">Selecione...</option>'+(emp.filiais||[]).map(f=>'<option value="'+f.id+'">'+f.nome+'</option>').join(''):'<option value="">Selecione a empresa primeiro</option>';
+}
+function mTab(t,btn){
+  document.querySelectorAll('#s-mega .tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  ['dashboard','empresas','lancamentos','auditoria','campos','equipe','backup'].forEach(x=>document.getElementById('m-'+x).style.display='none');
+  document.getElementById('m-'+t).style.display='block';
+  if(t==='auditoria')renderAuditMega();
+  if(t==='campos')renderCampos();
+  if(t==='empresas')renderEmps();
+  if(t==='dashboard')renderDash();
+  if(t==='equipe')renderEquipe();
+  if(t==='backup')renderBackup();
+}
+
+async function renderEquipe(){
+  const el=document.getElementById('eq-lista');
+  el.innerHTML=ld('Carregando...');
+  const {data}=await sb.from('perfis').select('*').eq('papel','op_mega');
+  if(!data||!data.length){el.innerHTML='<div style="font-size:13px;color:var(--txt2);padding:16px 0;text-align:center">Nenhum operador cadastrado ainda.</div>';return;}
+  el.innerHTML=data.map(p=>'<div class="emp-card" style="display:flex;align-items:center;gap:12px">'+
+    '<div class="avatar" style="background:#E6F1FB;color:#185FA5;width:36px;height:36px;font-size:13px;flex-shrink:0">⚙️</div>'+
+    '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">'+p.nome+'</div><div style="font-size:11px;color:var(--txt2)">Operador MegaFllex · acesso total</div></div>'+
+    '<button class="btn-sm" style="color:var(--neg)" onclick="removerOpMega(this.dataset.id,this.dataset.nome)" data-id="'+p.user_id+'" data-nome="'+p.nome+'">🗑️</button>'+
+    '</div>').join('');
+}
+
+async function criarOpMega(){
+  const nome=document.getElementById('eq-nome').value.trim();
+  const email=document.getElementById('eq-email').value.trim();
+  const fb=document.getElementById('eq-fb');
+  if(!nome||!email){alert('Preencha nome e e-mail');return;}
+  fb.style.display='block';fb.style.color='var(--txt2)';fb.textContent='⏳ Criando usuário...';
+  const senha=geraSenha();
+  const {data:u,error:e}=await sb.auth.signUp({email,password:senha,options:{data:{nome}}});
+  if(e){fb.style.color='var(--neg)';fb.textContent='❌ '+e.message;return;}
+  if(u?.user){
+    await sb.from('perfis').insert({user_id:u.user.id,papel:'op_mega',empresa_id:null,filial_id:null,nome});
+    document.getElementById('eq-nome').value='';
+    document.getElementById('eq-email').value='';
+    fb.style.color='var(--pos)';
+    fb.innerHTML='✅ Operador criado! <strong>'+email+'</strong> · Senha: <code style="background:var(--bg2);padding:2px 6px;border-radius:4px">'+senha+'</code>';
+    renderEquipe();
+  }
+}
+
+async function removerOpMega(userId,nome){
+  if(!confirm('Remover operador '+nome+'?'))return;
+  await sb.from('perfis').delete().eq('user_id',userId);
+  await sb.auth.admin?.deleteUser(userId);
+  renderEquipe();
+}
+async function renderDash(){
+  const {data:l}=await sb.from('lancamentos').select('total_dif,empresa_id');
+  const {data:a}=await sb.from('audit_log').select('id');
+  const tD=l?.reduce((s,x)=>s+(x.total_dif||0),0)||0;
+  document.getElementById('m-dash-cards').innerHTML=
+    '<div class="metric" style="background:var(--mega)"><div class="lbl" style="color:var(--mega-sub)">Empresas</div><div class="val" style="color:var(--mega-txt)">'+empC.length+'</div></div>'+
+    '<div class="metric" style="background:var(--bg2)"><div class="lbl" style="color:var(--txt2)">Lançamentos</div><div class="val">'+(l?.length||0)+'</div></div>'+
+    '<div class="metric" style="background:'+(a?.length?'var(--prop)':'var(--ok-bg)')+'"><div class="lbl" style="color:'+(a?.length?'var(--prop-txt)':'var(--ok-txt)')+'">Edições log</div><div class="val" style="color:'+(a?.length?'var(--prop-txt)':'var(--pos)')+'">'+(a?.length||0)+'</div></div>'+
+    '<div class="metric" style="background:'+(Math.abs(tD)>1?'var(--diff-bg)':'var(--ok-bg)')+'"><div class="lbl" style="color:'+(Math.abs(tD)>1?'var(--diff-txt)':'var(--ok-txt)')+'">Total dif.</div><div class="val" style="font-size:13px;color:'+(tD<0?'var(--neg)':tD>0?'var(--pos)':'var(--txt)')+'">'+fT(tD)+'</div></div>';
+  document.getElementById('m-dash-emp').innerHTML=empC.map(e=>{
+    const r=l?.filter(x=>x.empresa_id===e.id)||[];
+    const t=r.reduce((s,x)=>s+(x.total_dif||0),0);
+    return'<div class="emp-card" style="display:flex;align-items:center;gap:12px"><div class="avatar av-emp" style="width:36px;height:36px;font-size:13px;flex-shrink:0">'+e.nome.split(' ').map(w=>w[0]).join('').slice(0,2)+'</div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500">'+e.nome+'</div><div style="font-size:10px;color:var(--txt2)">'+(e.filiais||[]).length+' filial(is)</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--txt2)">'+r.length+' lanç.</div><div style="font-size:12px;font-weight:500" class="'+cls(t)+'">'+fT(t)+'</div></div></div>';
+  }).join('');
+}
+function renderEmps(){
+  document.getElementById('lista-empresas').innerHTML=empC.length?empC.map(e=>'<div class="emp-card" style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px"><div style="display:flex;align-items:flex-start;gap:10px;flex:1;min-width:0"><div class="avatar av-emp" style="width:38px;height:38px;font-size:13px;flex-shrink:0;margin-top:2px">'+e.nome.split(' ').map(w=>w[0]).join('').slice(0,2)+'</div><div style="min-width:0"><div style="font-size:13px;font-weight:500">'+e.nome+'</div><div style="font-size:11px;color:var(--txt2)">'+e.cnpj+' · '+(e.filiais||[]).length+' filial(is)</div><div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap">'+(e.filiais||[]).map(f=>'<span class="badge b-ok" style="font-size:10px">'+f.nome+'</span>').join('')+'</div></div></div><div style="display:flex;gap:6px;flex-shrink:0"><button class="btn-sm" onclick="abrirModalEmpresa(\''+e.id+'\')" title="Editar">✏️</button><button class="btn-sm" onclick="infoResetSenha(\''+e.nome+'\')" title="Info reset senha" style="color:var(--mega-sub)">🔑</button><button class="btn-sm" onclick="confirmarDelEmp(\''+e.id+'\')" style="color:var(--neg)">🗑️</button></div></div>').join(''):'<div style="font-size:13px;color:var(--txt2);padding:16px 0;text-align:center">Nenhuma empresa cadastrada.</div>';
+}
+
+// ── EMPRESA (PROPRIETÁRIO) ──────────────────────────────────
+async function iniciarEmpresa(){
+  let emp=empC.find(e=>e.id===pAt.empresa_id);
+  if(!emp){const {data}=await sb.from('empresas').select('*, filiais(*)').eq('id',pAt.empresa_id).single();emp=data;}
+  if(emp&&!empC.find(e=>e.id===emp.id))empC.push(emp);
+  document.getElementById('emp-nome-top').textContent=emp?.nome||'Empresa';
+  const filiais=emp?.filiais||[];
+  document.getElementById('e-sel-fil').innerHTML=filiais.map(f=>'<option value="'+f.id+'">'+f.nome+'</option>').join('');
+  const sm=document.getElementById('e-sel-mes');
+  sm.innerHTML=MESES.map(m=>'<option value="'+m+'">'+m+'</option>').join('');
+  sm.value=mesAtual();
+  await eCarregarLanc();
+  show('s-empresa');
+}
+async function eCarregarLanc(){
+  const fId=document.getElementById('e-sel-fil').value;
+  const mes=document.getElementById('e-sel-mes').value;
+  if(!fId)return;
+  document.getElementById('e-lanc-body').innerHTML='<tr><td colspan="10">'+ld('Buscando...')+'</td></tr>';
+  const {data}=await sb.from('lancamentos').select('*').eq('filial_id',fId).eq('mes_ano',mes).order('data_lanc');
+  await buildTable(document.getElementById('e-lanc-head'),document.getElementById('e-lanc-body'),data||[],true,'empresa');
+}
+function eTab(t,btn){
+  document.querySelectorAll('#s-empresa .tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  ['lancamentos','auditoria'].forEach(x=>document.getElementById('e-'+x).style.display='none');
+  document.getElementById('e-'+t).style.display='block';
+  if(t==='lancamentos')eCarregarLanc();
+  if(t==='auditoria'){
+    const el=document.getElementById('e-audit-lista');
+    el.innerHTML=ld('Carregando...');
+    sb.from('audit_log').select('*').eq('empresa_id',pAt.empresa_id).order('editado_em',{ascending:false}).limit(30)
+      .then(({data})=>el.innerHTML=buildAuditHtml(data||[]));
+  }
+}
+
+// ── FILIAL (OPERADOR) ────────────────────────────────────────
+async function iniciarFilial(){
+  if(!pAt.filial_id||!pAt.empresa_id){await mostrarSeletorFilial();return;}
+  await carregarFilial(pAt.filial_id);
+}
+async function mostrarSeletorFilial(){
+  const {data:emps}=await sb.from('empresas').select('*, filiais(*)').eq('ativa',true);
+  const empresasDisp=emps||[];
+  show('s-filial');
+  document.getElementById('fil-nome-top').textContent='Operador';
+  document.getElementById('fil-emp-top').textContent='Selecione empresa e filial';
+  document.getElementById('f-notice-filial').innerHTML='Selecione a <strong>empresa</strong> e <strong>filial</strong> para lançar os movimentos.';
+  const optsEmp=empresasDisp.map(e=>'<option value="'+e.id+'">'+e.nome+'</option>').join('');
+  document.getElementById('f-form-campos').innerHTML=
+    '<div class="grid2" style="margin-bottom:12px">'+
+    '<div class="irow"><label>Empresa</label><select id="sel-emp-op" onchange="atualizarFiliaisOp()"><option value="">Selecione...</option>'+optsEmp+'</select></div>'+
+    '<div class="irow"><label>Filial</label><select id="sel-fil-op"><option value="">Selecione a empresa primeiro</option></select></div>'+
+    '</div>'+
+    '<button class="btn" style="width:100%;padding:11px;margin-bottom:12px" onclick="confirmarFilialOp()">✅ Confirmar e lançar</button>';
+  window._empresasOp = empresasDisp;
+}
+function atualizarFiliaisOp(){
+  const eId=document.getElementById('sel-emp-op').value;
+  const emp=(window._empresasOp||[]).find(e=>e.id===eId);
+  const sf=document.getElementById('sel-fil-op');
+  sf.innerHTML=emp?(emp.filiais||[]).map(f=>'<option value="'+f.id+'">'+f.nome+'</option>').join(''):'<option value="">Selecione a empresa primeiro</option>';
+}
+async function confirmarFilialOp(){
+  const eId=document.getElementById('sel-emp-op')?.value;
+  const fId=document.getElementById('sel-fil-op')?.value;
+  if(!eId||!fId){alert('Selecione empresa e filial');return;}
+  pAt.empresa_id=eId;pAt.filial_id=fId;
+  await carregarFilial(fId);
+}
+async function carregarFilial(filialId){
+  const {data:fil}=await sb.from('filiais').select('*, empresas(nome)').eq('id',filialId).single();
+  document.getElementById('fil-nome-top').textContent='Operador · '+(fil?.nome||'Filial');
+  document.getElementById('fil-emp-top').textContent=(fil?.empresas?.nome||'Empresa')+' · edições em vermelho';
+  document.getElementById('f-notice-filial').innerHTML='Lançamentos identificados pela <strong>MegaFllex Auditoria</strong>. Filial: <strong>'+(fil?.nome||'')+'</strong>';
+  const sm=document.getElementById('f-sel-mes');
+  sm.innerHTML=MESES.map(m=>'<option value="'+m+'">'+m+'</option>').join('');
+  sm.value=mesAtual();
+  document.getElementById('f-data').value=hoje();
+  renderFormFilial();
+  show('s-filial');
+}
+function renderFormFilial(){
+  const g={};camC.forEach(c=>{if(!g[c.grupo])g[c.grupo]=[];g[c.grupo].push(c);});
+  let h='';
+  Object.entries(g).forEach(([gr,cs])=>{
+    h+='<div class="grupo-titulo">📁 '+gr+'</div><div class="grid2">';
+    cs.forEach(c=>{h+='<div class="irow"><label>'+c.label+'</label>'+(c.tipo==='moeda'?'<div class="input-brl"><span class="prefix">R$</span><input type="text" id="fl-'+c.id+'" placeholder="0,00" inputmode="decimal"></div>':'<input type="text" id="fl-'+c.id+'" placeholder="ok">')+'</div>';});
+    h+='</div>';
+  });
+  document.getElementById('f-form-campos').innerHTML=h;
+  camC.filter(c=>c.tipo==='moeda').forEach(c=>{const el=document.getElementById('fl-'+c.id);if(el)mBRL(el);});
+}
+async function salvarLanc(){
+  const dv=document.getElementById('f-data').value;
+  if(!dv){alert('Informe a data');return;}
+  const mesAno=mDA(dv);const valores={};let total=0;
+  camC.forEach(c=>{const el=document.getElementById('fl-'+c.id);if(!el)return;const v=c.tipo==='moeda'?pBRL(el.value):(el.value||'ok');valores[c.label]=String(v);if(c.tipo==='moeda')total+=parseFloat(v)||0;});
+  const {error}=await sb.from('lancamentos').upsert({empresa_id:pAt.empresa_id,filial_id:pAt.filial_id,mes_ano:mesAno,data_lanc:dv,valores,total_dif:total,criado_por:uAt.id},{onConflict:'filial_id,data_lanc'});
+  if(error){_salvandoEdicao=false;alert('Erro ao salvar: '+error.message);return;}
+  camC.forEach(c=>{const el=document.getElementById('fl-'+c.id);if(el)el.value='';});
+  const fb=document.getElementById('f-fb');fb.style.display='block';setTimeout(()=>fb.style.display='none',2500);
+  fCarregarHist();
+}
+async function fCarregarHist(){
+  const mes=document.getElementById('f-sel-mes').value;
+  document.getElementById('f-hist-body').innerHTML='<tr><td colspan="10">'+ld('Buscando...')+'</td></tr>';
+  const {data}=await sb.from('lancamentos').select('*').eq('filial_id',pAt.filial_id).eq('mes_ano',mes).order('data_lanc');
+  await buildTable(document.getElementById('f-hist-head'),document.getElementById('f-hist-body'),data||[],true,'filial');
+}
+function fTab(t,btn){
+  document.querySelectorAll('#s-filial .tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  document.getElementById('f-lancar').style.display=t==='lancar'?'block':'none';
+  document.getElementById('f-historico').style.display=t==='historico'?'block':'none';
+  if(t==='historico')fCarregarHist();
+}
+
+function confirmarDelEmp(id){
+  const emp=empC.find(e=>e.id===id);
+  if(!emp){alert('Empresa não encontrada');return;}
+  abrirModal('<div class="modal-box" onclick="event.stopPropagation()"><div class="modal-handle"></div><div class="modal-header"><h3>Remover empresa</h3><button onclick="fecharModal()" style="border:none;background:none;cursor:pointer;font-size:18px">×</button></div><div class="notice n-danger">Remover <strong>'+emp.nome+'</strong>? Esta ação desativa a empresa, mas mantém os dados históricos.</div><div class="modal-footer"><button class="btn" style="flex:1;color:var(--txt2)" onclick="fecharModal()">Cancelar</button><button class="btn-danger" style="flex:1" onclick="delEmp(\''+id+'\')">🗑️ Remover</button></div></div>');
+}
+async function delEmp(id){
+  await sb.from('empresas').update({ativa:false}).eq('id',id);
+  fecharModal();
+  const {data}=await sb.from('empresas').select('*, filiais(*)').eq('ativa',true);
+  empC=data||[];renderEmps();renderDash();preSelMega();
+}
+
+
+// ── OBSERVAÇÕES ──────────────────────────────────────────────
+let _obsCache = {}; // lancamento_id -> {campo_label: texto}
+
+function mostrarTip(e, txt){
+  const tip=document.getElementById('obs-tip');
+  tip.textContent=txt;
+  tip.style.display='block';
+  tip.style.left=(e.clientX+12)+'px';
+  tip.style.top=(e.clientY-10)+'px';
+}
+function mostrarTipEl(e, el){
+  mostrarTip(e, el.getAttribute('data-obs')||'');
+}
+function esconderTip(){
+  const tip=document.getElementById('obs-tip');
+  if(tip)tip.style.display='none';
+}
+
+async function abrirObservacao(lancId, campoLabel, quem){
+  const {data:l}=await sb.from('lancamentos').select('observacoes').eq('id',lancId).single();
+  const obs=(l?.observacoes||{})[campoLabel]||'';
+  const isOpmega=quem==='opmega'||pAt.papel==='op_mega';
+  window._obsLancId=lancId;
+  window._obsCampo=campoLabel;
+  window._obsQuem=quem;
+  abrirModal(
+    '<div class="modal-box" onclick="event.stopPropagation()">'+
+    '<div class="modal-handle"></div>'+
+    '<div class="modal-header"><h3>💬 Observação — '+campoLabel+'</h3>'+
+    '<button onclick="fecharModal()" style="border:none;background:none;cursor:pointer;font-size:18px">×</button></div>'+
+    (isOpmega
+      ?'<div class="irow"><label>Observação</label><textarea id="obs-txt" rows="4" style="resize:vertical;padding:8px 10px;border:0.5px solid var(--brd2);border-radius:var(--r);background:var(--bg);color:var(--txt);font-size:13px;width:100%;font-family:inherit">'+obs+'</textarea></div>'+
+       '<div class="modal-footer">'+
+       '<button class="btn-danger" style="flex:1" onclick="confirmarApagarObs()">🗑️ Apagar</button>'+
+       '<button class="btn" style="flex:1" onclick="confirmarSalvarObs()">💾 Salvar</button>'+
+       '</div>'
+      :'<div class="notice n-mega">'+(obs||'Nenhuma observação registrada.')+'</div>'
+    )+
+    '</div>'
+  );
+}
+async function confirmarSalvarObs(){
+  const txt=document.getElementById('obs-txt')?.value||'';
+  await salvarObservacao(window._obsLancId,window._obsCampo,txt);
+}
+async function confirmarApagarObs(){
+  await salvarObservacao(window._obsLancId,window._obsCampo,'');
+}
+
+async function salvarObservacao(lancId, campoLabel, texto){
+  texto=texto||'';
+  const {data:l}=await sb.from('lancamentos').select('observacoes').eq('id',lancId).single();
+  const obs={...(l?.observacoes||{})};
+  if(texto.trim()){
+    obs[campoLabel]=texto.trim();
+  } else {
+    delete obs[campoLabel];
+  }
+  const {error:obsErr}=await sb.from('lancamentos').update({observacoes:obs}).eq('id',lancId);
+  if(obsErr){alert('Erro ao salvar observação: '+obsErr.message);return;}
+  fecharModal();
+  // Atualizar cache
+  _obsCache[lancId]=obs;
+  // Recarregar a tabela para atualizar os triângulos
+  try{
+    if(document.getElementById('s-opmega')?.classList.contains('active'))await omCarregarLanc();
+    else if(document.getElementById('s-mega')?.classList.contains('active'))await mCarregarLanc();
+    else if(document.getElementById('s-empresa')?.classList.contains('active'))await eCarregarLanc();
+  }catch(e){}
+}
+
+
+// ── FERIADOS NACIONAIS BRASIL ────────────────────────────────
+function isFeriadoOuFimSemana(dataStr){
+  // dataStr formato: YYYY-MM-DD
+  if(!dataStr)return false;
+  const [y,m,d]=dataStr.split('-').map(Number);
+  const dt=new Date(y,m-1,d);
+  const dow=dt.getDay(); // 0=dom, 6=sab
+  if(dow===0||dow===6)return true;
+  // Feriados fixos
+  const fixos=[
+    '01-01','04-21','05-01','09-07','10-12','11-02','11-15','11-20','12-25'
+  ];
+  const chave=String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+  if(fixos.includes(chave))return true;
+  // Páscoa (algoritmo de Gauss)
+  const Y=y;
+  const a=Y%19,b=Math.floor(Y/100),e=Math.floor(Y/400);
+  const f=Math.floor((b-Math.floor(b/4)-Math.floor((b+8)/25)+1)/3);
+  const g=Math.floor((19*a+b-Math.floor(b/4)-f+15)%30);
+  const i=Math.floor(Y%4/4)+Math.floor(Y%7*2/7);
+  const l=(32+2*Math.floor(b%4)+2*i-g-Math.floor(g*(1+i)/(24+Math.floor((g+Math.floor(g*(1+i)/(24+1)))/29))))%7;
+  const mes=Math.floor((g+l+114)/31);
+  const dia=(g+l+114)%31+1;
+  const pascoa=new Date(Y,mes-1,dia);
+  // Carnaval = Páscoa - 47, Sexta-feira Santa = Páscoa - 2, Corpus Christi = Páscoa + 60
+  const feriados_moveis=[
+    new Date(pascoa.getTime()-47*86400000), // Carnaval Seg
+    new Date(pascoa.getTime()-48*86400000), // Carnaval Ter (opcional)
+    new Date(pascoa.getTime()-2*86400000),  // Sexta-feira Santa
+    pascoa,                                  // Páscoa
+    new Date(pascoa.getTime()+60*86400000)  // Corpus Christi
+  ];
+  for(const fh of feriados_moveis){
+    if(fh.getFullYear()===y&&fh.getMonth()===m-1&&fh.getDate()===d)return true;
+  }
+  return false;
+}
+
+async function buildTable(hEl,bEl,rows,comEdit,quem){
+  const nC=camC.length+3+(comEdit?1:0);
+  let h='<tr><th style="text-align:left;min-width:65px">Data</th>';
+  camC.forEach(c=>h+='<th style="min-width:88px">'+c.label+'</th>');
+  h+='<th style="min-width:95px">Total dif.</th><th style="min-width:80px">Status</th>';
+  if(comEdit)h+='<th style="min-width:50px">Edit.</th>';
+  h+='</tr>';hEl.innerHTML=h;
+  // Filtrar sábados, domingos e feriados
+  const rowsFiltradas=rows.filter(l=>!isFeriadoOuFimSemana(l.data_lanc));
+  if(!rowsFiltradas.length){bEl.innerHTML='<tr><td colspan="'+nC+'" style="text-align:center;padding:20px;color:var(--txt2)">'+(rows.length?'Sem lançamentos em dias úteis neste período.':'Nenhum lançamento neste período.')+'</td></tr>';return;}
+  const ids=rowsFiltradas.map(r=>r.id);
+  const {data:ed}=await sb.from('audit_log').select('lancamento_id,campo_label,papel_editor,nome_editor').in('lancamento_id',ids);
+  const eMap={},nMap={};
+  (ed||[]).forEach(e=>{if(!eMap[e.lancamento_id])eMap[e.lancamento_id]={};if(!nMap[e.lancamento_id])nMap[e.lancamento_id]={};eMap[e.lancamento_id][e.campo_label]=e.papel_editor;nMap[e.lancamento_id][e.campo_label]=e.nome_editor||e.papel_editor;});
+  const tots={};camC.forEach(c=>tots[c.label]=0);
+  let tg=0;
+  const html=rowsFiltradas.map(l=>{
+    const vs=l.valores||{};const tot=l.total_dif||0;tg+=tot;
+    const cEd=eMap[l.id]||{};const nEd=nMap[l.id]||{};
+    const temP=Object.values(cEd).some(v=>v==='proprietario');
+    const temO=Object.values(cEd).some(v=>v==='operador'||v==='op_mega'||v==='megafllex');
+    let tds='<td style="text-align:left">'+l.data_lanc?.slice(8,10)+'/'+l.data_lanc?.slice(5,7)+'</td>';
+    camC.forEach(c=>{
+      const rv=vs[c.label];const v=c.tipo==='moeda'?(parseFloat(rv)||0):(rv||'ok');
+      if(c.tipo==='moeda')tots[c.label]+=(parseFloat(rv)||0);
+      const ep=cEd[c.label];const ne=nEd[c.label]||'';
+      const cc=ep==='proprietario'?'cel-prop':ep==='operador'?'cel-oper':ep==='op_mega'?'cel-mega':ep==='megafllex'?'cel-admin':'';
+      const ic=ep?' <span style="font-size:9px" title="Editado por: '+ne+'">✎</span>':'';
+      const obsVal=(l.observacoes||{})[c.label]||'';
+      const triObs=obsVal?'<span class="obs-tri" data-obs="'+obsVal.replace(/"/g,"&quot;").replace(/'/g,"&#39;")+'" onmouseenter="mostrarTipEl(event,this)" onmouseleave="esconderTip()"></span>':'';
+      const addObs=(quem==='mega'||quem==='opmega')?'<span style="font-size:9px;cursor:pointer;color:var(--txt3);margin-left:2px" title="Adicionar observação" onclick="abrirObservacao(\''+l.id+'\',\''+c.label+'\',\''+quem+'\');event.stopPropagation()">💬</span>':'';
+      tds+='<td class="'+(c.tipo==='moeda'?cls(v):'')+' '+cc+(obsVal?' cel-com-obs':'')+('" data-lanc-id="'+l.id+'" data-campo="'+c.label+'" data-v="'+(c.tipo==='moeda'?v:'__txt')+'" style="position:relative;'+(c.tipo==='moeda'&&v<0?'color:#c0392b;font-weight:500':c.tipo==='moeda'&&v>0?'color:#1D9E75;font-weight:500':''))+' " title="'+(ep?'Editado por: '+ne:'')+'">'+triObs+fR(v)+ic+addObs+'</td>';
+    });
+    let st='';
+    const temM=Object.values(cEd).some(v=>v==='op_mega');
+    const temA=Object.values(cEd).some(v=>v==='megafllex');
+    if(temP)st+='<span class="badge b-prop">✎ prop.</span> ';
+    if(temO&&!temM)st+='<span class="badge b-oper">✎ oper.</span> ';
+    if(temM)st+='<span class="badge" style="background:#EEEDFE;color:#3C3489;border:0.5px solid #AFA9EC">✎ op-mega</span> ';
+    if(temA)st+='<span class="badge" style="background:#D8EBFF;color:#185FA5;border:0.5px solid #5B9BD5">✎ admin</span>';
+    if(!temP&&!temO&&!temM&&!temA)st=Math.abs(tot)<0.5?'<span class="badge b-ok">ok</span>':'<span class="badge b-diff">dif.</span>';
+    tds+='<td class="'+cls(tot)+'">'+fT(tot)+'</td><td>'+st+'</td>';
+    if(comEdit)tds+='<td><button onclick="abrirEdit(\''+l.id+'\',\''+quem+'\')" class="btn-sm" title="Editar">✏️</button></td>';
+    return'<tr>'+tds+'</tr>';
+  }).join('');
+  let tRow='<tr class="total-row"><td style="text-align:left">Total</td>';
+  camC.forEach(c=>{const v=tots[c.label]||0;tRow+='<td class="'+cls(v)+'">'+fT(v)+'</td>';});
+  tRow+='<td class="'+cls(tg)+'">'+fT(tg)+'</td><td></td>';
+  if(comEdit)tRow+='<td></td>';
+  tRow+='</tr>';
+  bEl.innerHTML=html+tRow;
+}
+
+async function mCarregarLanc(){
+  const eId=document.getElementById('m-sel-emp').value;
+  const fId=document.getElementById('m-sel-fil').value;
+  const mes=document.getElementById('m-sel-mes').value;
+  if(!eId||!fId){
+    document.getElementById('m-lanc-head').innerHTML='';
+    document.getElementById('m-lanc-body').innerHTML='<tr><td colspan="3" style="text-align:center;padding:16px;color:var(--txt2)">Selecione empresa e filial para ver os lançamentos.</td></tr>';
+    return;
+  }
+  document.getElementById('m-lanc-body').innerHTML='<tr><td colspan="10">'+ld('Buscando...')+'</td></tr>';
+  const {data}=await sb.from('lancamentos').select('*').eq('filial_id',fId).eq('mes_ano',mes).order('data_lanc');
+  await buildTable(document.getElementById('m-lanc-head'),document.getElementById('m-lanc-body'),data||[],false,'mega');
+}
+async function renderAuditMega(){
+  document.getElementById('m-audit-lista').innerHTML=ld('Carregando...');
+  const {data}=await sb.from('audit_log').select('*').order('editado_em',{ascending:false}).limit(50);
+  document.getElementById('m-audit-lista').innerHTML=buildAuditHtml(data||[]);
+}
+function renderCampos(){
+  const g={};camC.forEach(c=>{if(!g[c.grupo])g[c.grupo]=[];g[c.grupo].push(c);});
+  let h='';
+  Object.entries(g).forEach(([gr,cs])=>{
+    h+='<div class="grupo-titulo">📁 '+gr+'</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px">';
+    cs.forEach(c=>{h+='<span class="campo-tag">'+c.label+'<span style="font-size:9px;color:var(--txt3);margin-left:2px">'+(c.tipo==='moeda'?'(R$)':'(txt)')+'</span><button onclick="abrirModalCampo(\''+c.id+'\')" style="margin-left:3px;color:var(--txt2)">✏️</button><button onclick="confirmarDelCampo(\''+c.id+'\')">×</button></span>';});
+    h+='</div>';
+  });
+  document.getElementById('m-campos-ativos').innerHTML=h;
+}
+async function adicionarCampo(){
+  const nome=document.getElementById('m-novo-nome').value.trim();
+  if(!nome){alert('Informe o nome');return;}
+  const grupo=document.getElementById('m-novo-grupo').value;
+  const tipo=document.getElementById('m-novo-tipo').value;
+  const maxOrdem=camC.reduce((a,c)=>Math.max(a,c.ordem),0);
+  const {error}=await sb.from('campos').insert({label:nome,grupo,tipo,ordem:maxOrdem+1,criado_por:uAt.id});
+  if(error){alert('Erro: '+error.message);return;}
+  document.getElementById('m-novo-nome').value='';
+  const fb=document.getElementById('m-campo-fb');fb.textContent='✅ Campo "'+nome+'" adicionado!';fb.style.display='block';
+  setTimeout(()=>fb.style.display='none',2500);
+  await carregarCampos();renderCampos();
+}
+function abrirModalCampo(id){
+  const c=camC.find(x=>x.id===id);
+  abrirModal('<div class="modal-box" onclick="event.stopPropagation()"><div class="modal-handle"></div><div class="modal-header"><h3>Editar campo</h3><button onclick="fecharModal()" style="border:none;background:none;cursor:pointer;font-size:18px">×</button></div><div class="irow"><label>Nome</label><input type="text" id="mc-nome" value="'+c.label+'"></div><div class="irow"><label>Grupo</label><select id="mc-grupo">'+['Jogos','Pix','Carro Forte','Pagamentos','Cartões','Outros'].map(gr=>'<option'+(gr===c.grupo?' selected':'')+'>'+gr+'</option>').join('')+'</select></div><div class="irow"><label>Tipo</label><select id="mc-tipo"><option value="moeda"'+(c.tipo==='moeda'?' selected':'')+'>Valor (R$)</option><option value="texto"'+(c.tipo==='texto'?' selected':'')+'>Texto/ok</option></select></div><div class="modal-footer"><button class="btn" style="flex:1;color:var(--txt2)" onclick="fecharModal()">Cancelar</button><button class="btn" style="flex:1" onclick="salvarCampo(\''+id+'\')">💾 Salvar</button></div></div>');
+}
+async function salvarCampo(id){
+  await sb.from('campos').update({label:document.getElementById('mc-nome').value.trim(),grupo:document.getElementById('mc-grupo').value,tipo:document.getElementById('mc-tipo').value}).eq('id',id);
+  fecharModal();await carregarCampos();renderCampos();
+}
+function confirmarDelCampo(id){
+  const c=camC.find(x=>x.id===id);
+  abrirModal('<div class="modal-box" onclick="event.stopPropagation()"><div class="modal-handle"></div><div class="modal-header"><h3>Remover campo</h3><button onclick="fecharModal()" style="border:none;background:none;cursor:pointer;font-size:18px">×</button></div><div class="notice n-danger">Remover <strong>'+c.label+'</strong>?</div><div class="modal-footer"><button class="btn" style="flex:1;color:var(--txt2)" onclick="fecharModal()">Cancelar</button><button class="btn-danger" style="flex:1" onclick="delCampo(\''+id+'\')">🗑️ Remover</button></div></div>');
+}
+async function delCampo(id){await sb.from('campos').update({ativo:false}).eq('id',id);fecharModal();await carregarCampos();renderCampos();}
+
+// CRUD EMPRESAS
+function abrirModalEmpresa(id){
+  const emp=id?empC.find(e=>e.id===id):null;
+  const filStr=emp?(emp.filiais||[]).map(f=>f.nome).join('\n'):'';
+  const bUsr=`<div style="margin-top:10px;padding:10px 12px;background:var(--mega);border-radius:var(--r);border:0.5px solid var(--mega-brd)">
+    <div style="font-size:11px;font-weight:500;color:var(--mega-txt);margin-bottom:8px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="20" height="20">
+  <defs>
+    <linearGradient id="face_icon4" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0A2A5E"></stop>
+      <stop offset="20%" stop-color="#1C57C9"></stop>
+      <stop offset="42%" stop-color="#6FA0EE"></stop>
+      <stop offset="50%" stop-color="#E8F1FF"></stop>
+      <stop offset="58%" stop-color="#6FA0EE"></stop>
+      <stop offset="80%" stop-color="#1C57C9"></stop>
+      <stop offset="100%" stop-color="#0A2A5E"></stop>
+    </linearGradient>
+    <linearGradient id="shade_icon4" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25"></stop>
+      <stop offset="60%" stop-color="#000000" stop-opacity="0"></stop>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.35"></stop>
+    </linearGradient>
+  </defs>
+  <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="#04122B" opacity="0.3" transform="translate(0 3)"></path>
+  <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="#04122B"></path>
+  <g transform="translate(32 33) scale(0.92) translate(-32 -33)">
+    <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="url(#face_icon4)"></path>
+    <path d="M32 4 L56 8 C58 8 60 10 60 12 L60 30 C60 46 48 56 32 62 C16 56 4 46 4 30 L4 12 C4 10 6 8 8 8 Z" fill="url(#shade_icon4)"></path>
+  </g>
+  <path d="M18 46 L18 22 L26 22 L32 32 L38 22 L46 22 L46 46 L40 46 L40 30 L34 40 L30 40 L24 30 L24 46 Z" fill="#ffffff"></path>
+</svg> ${id?'Adicionar usuário':'Cadastrar usuários'} — ${id?'deixe em branco se não quiser adicionar':'criados automaticamente no Supabase'}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div>
+        <div style="font-size:10px;font-weight:500;color:var(--mega-sub);margin-bottom:4px">Proprietário</div>
+        <input type="email" id="mo-prop-email" placeholder="email@dominio.com" style="width:100%;padding:7px 10px;border:0.5px solid var(--mega-brd);border-radius:var(--r);background:var(--bg);color:var(--txt);font-size:12px;margin-bottom:4px">
+        <input type="text" id="mo-prop-nome" placeholder="Nome completo" style="width:100%;padding:7px 10px;border:0.5px solid var(--mega-brd);border-radius:var(--r);background:var(--bg);color:var(--txt);font-size:12px">
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:500;color:var(--mega-sub);margin-bottom:4px">Operador</div>
+        <input type="email" id="mo-oper-email" placeholder="email@dominio.com" style="width:100%;padding:7px 10px;border:0.5px solid var(--mega-brd);border-radius:var(--r);background:var(--bg);color:var(--txt);font-size:12px;margin-bottom:4px">
+        <input type="text" id="mo-oper-nome" placeholder="Nome completo" style="width:100%;padding:7px 10px;border:0.5px solid var(--mega-brd);border-radius:var(--r);background:var(--bg);color:var(--txt);font-size:12px">
+      </div>
+    </div>
+    <div style="font-size:10px;color:var(--mega-sub)">Senha padrão: <strong>Mega@2026</strong></div>
+  </div>`;
+  abrirModal(`<div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-header"><h3>${emp?'Editar empresa':'Nova empresa'}</h3><button onclick="fecharModal()" style="border:none;background:none;cursor:pointer;font-size:18px">×</button></div>
+    <div class="irow"><label>Nome da empresa</label><input type="text" id="mo-nome" value="${emp?emp.nome:''}" placeholder="Ex: Supermercado ABC"></div>
+    <div class="irow"><label>CNPJ</label><input type="text" id="mo-cnpj" value="${emp?emp.cnpj:''}" placeholder="00.000.000/0001-00" oninput="mascaraCNPJ(this)"></div>
+    <div class="irow"><label>Filiais (uma por linha)</label><textarea id="mo-filiais" rows="3" style="resize:vertical;padding:8px 10px;border:0.5px solid var(--brd2);border-radius:var(--r);background:var(--bg);color:var(--txt);font-size:14px;width:100%;font-family:inherit">${filStr}</textarea></div>
+    ${bUsr}
+    <div class="modal-footer" style="margin-top:12px">
+      <button class="btn" style="flex:1;color:var(--txt2)" onclick="fecharModal()">Cancelar</button>
+      <button class="btn" style="flex:1" onclick="salvarEmpresa('${id||''}')">💾 Salvar</button>
+    </div>
+  </div>`);
+}
+async function salvarEmpresa(id){
+  const nome=document.getElementById('mo-nome').value.trim();
+  const cnpj=document.getElementById('mo-cnpj').value.trim();
+  const filStr=document.getElementById('mo-filiais').value.trim();
+  if(!nome){alert('Informe o nome');return;}
+  const nomes=filStr?filStr.split('\n').map(s=>s.trim()).filter(Boolean):[];
+  let empId=id;
+  // Salvar empresa
+  if(id){
+    await sb.from('empresas').update({nome,cnpj}).eq('id',id);
+  } else {
+    const {data,error}=await sb.from('empresas').insert({nome,cnpj,criado_por:uAt.id}).select().single();
+    if(error){alert('Erro ao criar empresa: '+error.message);return;}
+    empId=data?.id;
+  }
+  // Salvar filiais (sem duplicar — diff entre o que existe e o que foi enviado)
+  let filiaisIds=[];
+  if(empId&&nomes.length){
+    // Buscar filiais existentes
+    const {data:exist}=await sb.from('filiais').select('id,nome').eq('empresa_id',empId);
+    const existentes=exist||[];
+    const nomesExistentes=existentes.map(f=>f.nome);
+    // Inserir só os novos (que não existem ainda)
+    const novos=nomes.filter(n=>!nomesExistentes.includes(n));
+    if(novos.length){
+      await sb.from('filiais').insert(novos.map(n=>({empresa_id:empId,nome:n})));
+    }
+    // Remover filiais que não estão mais na lista (apenas em modo edição)
+    if(id){
+      const remover=existentes.filter(f=>!nomes.includes(f.nome));
+      for(const f of remover){
+        await sb.from('filiais').delete().eq('id',f.id);
+      }
+    }
+    // Buscar IDs atuais
+    const {data:fAtual}=await sb.from('filiais').select('id').eq('empresa_id',empId);
+    filiaisIds=(fAtual||[]).map(f=>f.id);
+  } else if(empId){
+    const {data:fEx}=await sb.from('filiais').select('id').eq('empresa_id',empId).limit(1);
+    if(fEx&&fEx.length)filiaisIds=[fEx[0].id];
+  }
+  // Criar usuários (tanto em nova quanto edição)
+  // Gerar senhas únicas para cada usuário
+  const senhaProp=geraSenha();
+  const senhaOper=geraSenha();
+  const propEmail=(document.getElementById('mo-prop-email')?.value||'').trim();
+  const propNome=(document.getElementById('mo-prop-nome')?.value||'').trim();
+  const operEmail=(document.getElementById('mo-oper-email')?.value||'').trim();
+  const operNome=(document.getElementById('mo-oper-nome')?.value||'').trim();
+  const erros=[],msgs=[],credenciais=[];
+  if(propEmail&&empId){
+    const {data:pu,error:pe}=await sb.auth.signUp({email:propEmail,password:senhaProp,options:{data:{nome:propNome||propEmail}}});
+    if(pe){erros.push(pe.message);msgs.push('❌ Proprietário: '+propEmail+' — '+pe.message);}
+    else if(pu?.user){
+      await sb.from('perfis').insert({user_id:pu.user.id,papel:'proprietario',empresa_id:empId,filial_id:null,nome:propNome||propEmail});
+      msgs.push('✅ Proprietário: '+propEmail);
+      credenciais.push({papel:'Proprietário',email:propEmail,senha:senhaProp});
+    }
+  }
+  if(operEmail&&empId){
+    if(propEmail)await new Promise(r=>setTimeout(r,3000));
+    const {data:ou,error:oe}=await sb.auth.signUp({email:operEmail,password:senhaOper,options:{data:{nome:operNome||operEmail}}});
+    if(oe){erros.push(oe.message);msgs.push('❌ Operador: '+operEmail+' — '+oe.message);}
+    else if(ou?.user){
+      await sb.from('perfis').insert({user_id:ou.user.id,papel:'operador',empresa_id:empId,filial_id:filiaisIds[0]||null,nome:operNome||operEmail});
+      msgs.push('✅ Operador: '+operEmail);
+      credenciais.push({papel:'Operador',email:operEmail,senha:senhaOper});
+    }
+  }
+  fecharModal();
+  const {data:empAtual}=await sb.from('empresas').select('*, filiais(*)').eq('ativa',true);
+  empC=empAtual||[];renderEmps();renderDash();preSelMega();
+  if(msgs.length){
+    const credsHtml=credenciais.map(cr=>
+      '<div style="background:var(--bg2);border:0.5px solid var(--brd2);border-radius:var(--r);padding:8px 10px;margin-top:6px;font-size:11px">'+
+      '<div style="font-weight:500;margin-bottom:3px">'+cr.papel+'</div>'+
+      '<div>📧 <code>'+cr.email+'</code></div>'+
+      '<div style="margin-top:2px">🔑 <code style="color:#1D9E75;font-weight:600">'+cr.senha+'</code></div>'+
+      '</div>'
+    ).join('');
+    setTimeout(()=>abrirModal(
+      '<div class="modal-box" onclick="event.stopPropagation()">'+
+      '<div class="modal-handle"></div>'+
+      '<div class="modal-header"><h3>'+(id?'Empresa atualizada!':'Empresa criada!')+'</h3></div>'+
+      '<div class="notice n-mega" style="flex-direction:column;gap:4px;align-items:flex-start">'+
+      msgs.map(m=>'<div style="font-size:12px">'+m+'</div>').join('')+
+      '</div>'+
+      (credenciais.length?
+        '<div style="font-size:11px;font-weight:600;margin:10px 0 4px;color:var(--neg)">⚠️ Anote agora — credenciais não serão exibidas novamente!</div>'+
+        credsHtml:'')+
+      (erros.length?
+        '<div style="font-size:10px;color:var(--neg);margin-top:8px">'+erros.join('<br>')+'<br>Aguarde 1 min e tente pelo botão ✏️</div>':'')+
+      '<button class="btn" style="width:100%;margin-top:12px" onclick="fecharModal()">✅ Anotei as credenciais</button>'+
+      '</div>'
+    ),300);
+  }
+
+}
+// OCULTAR ZEROS
+function toggleZeros(ctx){
+  zeros[ctx]=!zeros[ctx];
+  const btn=document.getElementById('btn-zeros-'+ctx);
+  if(btn)btn.textContent=zeros[ctx]?'👁️ Mostrar zeros':'👁️ Ocultar zeros';
+  const hIds={fil:'f-hist-head',emp:'e-lanc-head',mega:'m-lanc-head',opmega:'om-lanc-head'};
+  const bIds={fil:'f-hist-body',emp:'e-lanc-body',mega:'m-lanc-body',opmega:'om-lanc-body'};
+  const hEl=document.getElementById(hIds[ctx]);
+  const bEl=document.getElementById(bIds[ctx]);
+  if(!hEl||!bEl)return;
+  const ths=hEl.querySelectorAll('th');
+  const allRows=[...bEl.querySelectorAll('tr')];
+  ths.forEach((th,i)=>{
+    if(i===0||i>=ths.length-2)return;
+    const tds=allRows.map(r=>r.querySelectorAll('td')[i]).filter(Boolean);
+    const todosZero=tds.every(td=>{
+      if(td.classList.contains('total-row')||td.textContent.trim()==='Total')return true;
+      const dv=td.getAttribute('data-v');
+      if(dv!==null)return parseFloat(dv)===0||dv==='__txt';
+      const t=td.textContent.trim();
+      return t==='ok'||t==='R$ 0,00'||t===''||t==='Total';
+    });
+    const ocultar=zeros[ctx]&&todosZero;
+    th.style.display=ocultar?'none':'';tds.forEach(td=>td.style.display=ocultar?'none':'');
+  });
+}
+
+// EDIÇÃO
+async function abrirEdit(id,quem){
+  eLancId=id;eQuem=quem;
+  const {data:l}=await sb.from('lancamentos').select('*').eq('id',id).single();
+  eOrig=JSON.parse(JSON.stringify(l));
+  const isE=quem==='empresa'||pAt.papel==='proprietario';
+  document.getElementById('edit-outer').style.borderColor=isE?'var(--prop-brd)':'var(--oper-brd)';
+  const tb=document.getElementById('edit-topbar');tb.style.background=isE?'var(--prop)':'var(--oper)';tb.style.borderRadius='12px 12px 0 0';
+  const bb=document.getElementById('edit-back-btn');bb.style.borderColor=isE?'var(--prop-brd)':'var(--oper-brd)';bb.style.color=isE?'var(--prop-txt)':'var(--oper-txt)';
+  document.getElementById('edit-badge').innerHTML='<span class="badge '+(isE?'b-prop':'b-oper')+'">'+l.data_lanc?.slice(8,10)+'/'+l.data_lanc?.slice(5,7)+'</span>';
+  const n=document.getElementById('edit-notice');n.className='notice '+(isE?'n-warn':'n-oper');
+  n.innerHTML='🛡️'+(isE?'Proprietário':'Operador')+'</strong> · cada coluna alterada é registrada na <strong>MegaFllex Auditoria</strong>.';
+  document.getElementById('edit-back-btn').onclick=voltarEdit;
+  document.getElementById('edit-cancel-btn').onclick=voltarEdit;
+  const g={};camC.forEach(c=>{if(!g[c.grupo])g[c.grupo]=[];g[c.grupo].push(c);});
+  let h='';
+  Object.entries(g).forEach(([gr,cs])=>{
+    h+='<div class="grupo-titulo">📁 '+gr+'</div><div class="grid2">';
+    cs.forEach(c=>{const v=parseFloat(l.valores?.[c.label])||0;h+='<div class="irow"><label>'+c.label+'</label>'+(c.tipo==='moeda'?'<div class="input-brl"><span class="prefix">R$</span><input type="text" id="ei-'+c.id+'" value="'+fBRL(v)+'" inputmode="decimal"></div>':'<input type="text" id="ei-'+c.id+'" value="'+(l.valores?.[c.label]||'ok')+'">')+'</div>';});
+    h+='</div>';
+  });
+  document.getElementById('edit-campos-form').innerHTML=h;
+  camC.filter(c=>c.tipo==='moeda').forEach(c=>{const el=document.getElementById('ei-'+c.id);if(el)mBRL(el);});
+  show('s-edit');
+}
+let _salvandoEdicao=false;
+async function salvarEdicao(){
+  if(_salvandoEdicao)return;
+  _salvandoEdicao=true;
+  const {data:l}=await sb.from('lancamentos').select('*').eq('id',eLancId).single();
+  const nv={...l.valores};let nT=0;const mud=[];
+  camC.forEach(c=>{
+    const el=document.getElementById('ei-'+c.id);if(!el)return;
+    if(c.tipo==='moeda'){const novo=pBRL(el.value);const antes=parseFloat(eOrig.valores?.[c.label])||0;nT+=novo;if(Math.abs(novo-antes)>0.001){nv[c.label]=String(novo);mud.push({campo:c.label,antes:String(antes),depois:String(novo)});}}
+    else{const novo=el.value||'ok';const antes=eOrig.valores?.[c.label]||'ok';if(novo!==antes){nv[c.label]=novo;mud.push({campo:c.label,antes,depois:novo});}}
+  });
+  if(!mud.length){_salvandoEdicao=false;alert('Nenhum valor foi alterado.');voltarEdit();return;}
+  const {error}=await sb.from('lancamentos').update({valores:nv,total_dif:nT}).eq('id',eLancId);
+  if(error){alert('Erro ao salvar: '+error.message);return;}
+  const ts=agr().toISOString();
+  const papel=eQuem==='empresa'?'proprietario':eQuem==='filial'?'operador':eQuem==='opmega'?'op_mega':pAt.papel||'operador';
+  await sb.from('audit_log').insert(mud.map(m=>({lancamento_id:eLancId,empresa_id:l.empresa_id,filial_id:l.filial_id,mes_ano:l.mes_ano,data_lanc:l.data_lanc,campo_label:m.campo,valor_antes:m.antes,valor_depois:m.depois,editado_por:uAt.id,papel_editor:papel,nome_editor:pAt.nome||papel,editado_em:ts})));
+  _salvandoEdicao=false;
+  voltarEdit();
+}
+document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('edit-save-btn');if(b)b.onclick=salvarEdicao;});
+function voltarEdit(){
+  if(eQuem==='empresa'){eCarregarLanc();show('s-empresa');}
+  else if(eQuem==='opmega'){omCarregarLanc();show('s-opmega');}
+  else{fCarregarHist();show('s-filial');}
+}
+
+// AUDITORIA
+function buildAuditHtml(logs){
+  if(!logs.length)return'<div style="font-size:13px;color:var(--txt2);padding:12px 0;text-align:center">Nenhuma edição registrada ainda.</div>';
+  return logs.map(a=>{
+    const isP=a.papel_editor==='proprietario';
+    return'<div class="audit-card" style="border-color:'+(isP?'#E6A817':'#D85A30')+'"><div style="background:'+(isP?'var(--prop)':'var(--oper)')+';margin:-10px -12px 10px;padding:9px 12px;border-radius:12px 12px 0 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="badge '+(isP?'b-prop':'b-oper')+'">✏️ '+a.nome_editor+'</span><span style="font-size:11px;color:var(--txt2)">lançamento <strong>'+a.data_lanc?.slice(8,10)+'/'+a.data_lanc?.slice(5,7)+'</strong> · '+a.mes_ano+'</span><span style="font-size:10px;color:var(--txt3);margin-left:auto">'+new Date(a.editado_em).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})+'</span></div><div class="col-change"><span style="font-weight:500;min-width:120px">'+a.campo_label+'</span><span class="neg">'+fT(parseFloat(a.valor_antes)||0)+'</span><span style="color:var(--txt3)">→</span><span class="pos">'+fT(parseFloat(a.valor_depois)||0)+'</span></div></div>';
+  }).join('');
+}
+
+// RELATÓRIO
+async function imprimirRelatorio(origem){
+  let rows=[],filN='',empN='',mesN='',titulo='';
+  if(origem==='empresa'){
+    const fId=document.getElementById('e-sel-fil').value;const mes=document.getElementById('e-sel-mes').value;
+    const emp=empC.find(e=>e.id===pAt.empresa_id);const fil=emp?.filiais?.find(f=>f.id===fId);
+    filN=fil?.nome||'';empN=emp?.nome||'';mesN=mes;titulo='Relatório de Lançamentos';
+    const {data}=await sb.from('lancamentos').select('*').eq('filial_id',fId).eq('mes_ano',mes).order('data_lanc');rows=data||[];
+  }else if(origem==='filial'){
+    const mes=document.getElementById('f-sel-mes').value;
+    const {data:fil}=await sb.from('filiais').select('*, empresas(nome)').eq('id',pAt.filial_id).single();
+    filN=fil?.nome||'';empN=fil?.empresas?.nome||'';mesN=mes;titulo='Relatório de Lançamentos';
+    const {data}=await sb.from('lancamentos').select('*').eq('filial_id',pAt.filial_id).eq('mes_ano',mes).order('data_lanc');rows=data||[];
+  }else if(origem==='opmega'){
+    const fId=document.getElementById('om-sel-fil').value;const mes=document.getElementById('om-sel-mes').value;
+    const eId=document.getElementById('om-sel-emp').value;
+    const emp=empC.find(e=>e.id===eId);const fil=emp?.filiais?.find(f=>f.id===fId);
+    filN=fil?.nome||'';empN=emp?.nome||'';mesN=mes;titulo='Relatório — Operador MegaFllex';
+    const {data}=await sb.from('lancamentos').select('*').eq('filial_id',fId).eq('mes_ano',mes).order('data_lanc');rows=data||[];
+  }else{
+    const fId=document.getElementById('m-sel-fil').value;const mes=document.getElementById('m-sel-mes').value;
+    const eId=document.getElementById('m-sel-emp').value;
+    const emp=empC.find(e=>e.id===eId);const fil=emp?.filiais?.find(f=>f.id===fId);
+    filN=fil?.nome||'';empN=emp?.nome||'';mesN=mes;titulo='Relatório MegaFllex Auditoria';
+    const {data}=await sb.from('lancamentos').select('*').eq('filial_id',fId).eq('mes_ano',mes).order('data_lanc');rows=data||[];
+  }
+  rows=rows.filter(l=>!isFeriadoOuFimSemana(l.data_lanc));
+  if(!rows.length){alert('Nenhum lançamento em dias úteis para imprimir.');return;}
+  const ids=rows.map(r=>r.id);
+  const {data:ed}=await sb.from('audit_log').select('lancamento_id,campo_label,papel_editor').in('lancamento_id',ids);
+  const eMap={};(ed||[]).forEach(e=>{if(!eMap[e.lancamento_id])eMap[e.lancamento_id]={};eMap[e.lancamento_id][e.campo_label]=e.papel_editor;});
+  const d=agr();const dI=d.toLocaleDateString('pt-BR');const hI=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const tots={};camC.forEach(c=>tots[c.label]=0);let tg=0;
+  const linhas=rows.map((l,idx)=>{
+    const vs=l.valores||{};const tot=l.total_dif||0;tg+=tot;const cEd=eMap[l.id]||{};
+    let tds='<td class="dc">'+l.data_lanc?.slice(8,10)+'/'+l.data_lanc?.slice(5,7)+'</td>';
+    camC.forEach(c=>{
+      const rv=vs[c.label];const v=c.tipo==='moeda'?(parseFloat(rv)||0):(rv||'ok');
+      if(c.tipo==='moeda')tots[c.label]+=(parseFloat(rv)||0);
+      const ep=cEd[c.label];
+      const bg=ep==='proprietario'?'background:#FFF3CD;':ep==='operador'?'background:#FFD6D6;':'';
+      const cor=c.tipo==='moeda'?((parseFloat(rv)||0)>0?'color:#0a7a4e;':(parseFloat(rv)||0)<0?'color:#c0392b;':''):'';
+      tds+='<td style="'+bg+cor+'">'+(c.tipo==='moeda'?fT(parseFloat(rv)||0):(rv||'ok'))+'</td>';
+    });
+    tds+='<td style="font-weight:600;color:'+(tot>0?'#0a7a4e':tot<0?'#c0392b':'inherit')+'">'+fT(tot)+'</td>';
+    const temP=Object.values(cEd).includes('proprietario');const temO=Object.values(cEd).includes('operador');
+    const stC=temP?'background:#FFF3CD;color:#7A5000':temO?'background:#FFD6D6;color:#7A1A1A':Math.abs(tot)<0.5?'background:#EAF3DE;color:#3B6D11':'background:#FAECE7;color:#993C1D';
+    tds+='<td style="text-align:center;font-size:10px;'+stC+';padding:3px 6px;border-radius:4px">'+(temP?'prop.':temO?'oper.':Math.abs(tot)<0.5?'ok':'dif.')+'</td>';
+    return'<tr'+(idx%2===1?' class="zb"':'')+'>'+tds+'</tr>';
+  }).join('');
+  let tRow='<tr class="tr"><td><strong>Total</strong></td>';
+  camC.forEach(c=>{const v=tots[c.label]||0;tRow+='<td style="font-weight:600;color:'+(v>0?'#0a7a4e':v<0?'#c0392b':'inherit')+'">'+(c.tipo==='moeda'?fT(v):'')+'</td>';});
+  tRow+='<td style="font-weight:700;color:'+(tg>0?'#0a7a4e':tg<0?'#c0392b':'inherit')+'">'+fT(tg)+'</td><td></td></tr>';
+  const th=camC.map(c=>'<th>'+c.label+'</th>').join('');
+  const html='<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>'+titulo+'</title><style>@page{size:A4 landscape;margin:12mm 10mm}*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{font-size:9px;color:#1a1a18}.cab{display:flex;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #3C3489}.logo{display:flex;align-items:center;gap:8px}.logo-ic{width:36px;height:36px;border-radius:50%;background:#EEEDFE;display:flex;align-items:center;justify-content:center;font-size:18px}.logo-nm{font-size:14px;font-weight:700;color:#3C3489}.logo-sb{font-size:9px;color:#534AB7}.inf{text-align:right;font-size:9px;color:#6b6b67}h2{font-size:12px;font-weight:600;color:#3C3489;margin-bottom:3px}table{width:100%;border-collapse:collapse;font-size:8px}th{background:#EEEDFE;color:#3C3489;padding:4px 5px;text-align:right;border:0.5px solid #AFA9EC;font-weight:600;font-size:7.5px;white-space:nowrap}th:first-child{text-align:left}td{padding:3px 5px;border:0.5px solid #e0e0e0;text-align:right;white-space:nowrap}td.dc{text-align:left;font-weight:500;background:#f9f9f7}.tr td{background:#EEEDFE;font-weight:700;border-top:1.5px solid #3C3489}tr.zb td{background:#f0f0ee!important}tr.zb td.dc{background:#e8e8e6!important}.leg{display:flex;gap:16px;margin-top:8px;font-size:8px;color:#6b6b67}.li{display:flex;align-items:center;gap:4px}.lb{width:14px;height:10px;border-radius:2px;border:0.5px solid #ccc}.rod{margin-top:8px;padding-top:6px;border-top:1px solid #e0e0e0;font-size:8px;color:#9c9a92;display:flex;justify-content:space-between}</style></head><body><div class="cab"><div><div class="logo"><div class="logo-ic"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZmFjZSIgeDE9IjAiIHkxPSIwIiB4Mj0iMSIgeTI9IjAiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMEEyQTVFIj48L3N0b3A+CiAgICAgIDxzdG9wIG9mZnNldD0iMjAlIiBzdG9wLWNvbG9yPSIjMUM1N0M5Ij48L3N0b3A+CiAgICAgIDxzdG9wIG9mZnNldD0iNDIlIiBzdG9wLWNvbG9yPSIjNkZBMEVFIj48L3N0b3A+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjRThGMUZGIj48L3N0b3A+CiAgICAgIDxzdG9wIG9mZnNldD0iNTglIiBzdG9wLWNvbG9yPSIjNkZBMEVFIj48L3N0b3A+CiAgICAgIDxzdG9wIG9mZnNldD0iODAlIiBzdG9wLWNvbG9yPSIjMUM1N0M5Ij48L3N0b3A+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzBBMkE1RSI+PC9zdG9wPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0ic2hhZGUiIHgxPSIwIiB5MT0iMCIgeDI9IjAiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI2ZmZmZmZiIgc3RvcC1vcGFjaXR5PSIwLjI1Ij48L3N0b3A+CiAgICAgIDxzdG9wIG9mZnNldD0iNjAlIiBzdG9wLWNvbG9yPSIjMDAwMDAwIiBzdG9wLW9wYWNpdHk9IjAiPjwvc3RvcD4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMDAwMDAwIiBzdG9wLW9wYWNpdHk9IjAuMzUiPjwvc3RvcD4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxwYXRoIGQ9Ik0zMiA0IEw1NiA4IEM1OCA4IDYwIDEwIDYwIDEyIEw2MCAzMCBDNjAgNDYgNDggNTYgMzIgNjIgQzE2IDU2IDQgNDYgNCAzMCBMNCAxMiBDNCAxMCA2IDggOCA4IFoiIGZpbGw9IiMwNDEyMkIiIG9wYWNpdHk9IjAuMyIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCAzKSI+PC9wYXRoPgogIDxwYXRoIGQ9Ik0zMiA0IEw1NiA4IEM1OCA4IDYwIDEwIDYwIDEyIEw2MCAzMCBDNjAgNDYgNDggNTYgMzIgNjIgQzE2IDU2IDQgNDYgNCAzMCBMNCAxMiBDNCAxMCA2IDggOCA4IFoiIGZpbGw9IiMwNDEyMkIiPjwvcGF0aD4KICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgzMiAzMykgc2NhbGUoMC45MikgdHJhbnNsYXRlKC0zMiAtMzMpIj4KICAgIDxwYXRoIGQ9Ik0zMiA0IEw1NiA4IEM1OCA4IDYwIDEwIDYwIDEyIEw2MCAzMCBDNjAgNDYgNDggNTYgMzIgNjIgQzE2IDU2IDQgNDYgNCAzMCBMNCAxMiBDNCAxMCA2IDggOCA4IFoiIGZpbGw9InVybCgjZmFjZSkiPjwvcGF0aD4KICAgIDxwYXRoIGQ9Ik0zMiA0IEw1NiA4IEM1OCA4IDYwIDEwIDYwIDEyIEw2MCAzMCBDNjAgNDYgNDggNTYgMzIgNjIgQzE2IDU2IDQgNDYgNCAzMCBMNCAxMiBDNCAxMCA2IDggOCA4IFoiIGZpbGw9InVybCgjc2hhZGUpIj48L3BhdGg+CiAgPC9nPgogIDxwYXRoIGQ9Ik0xOCA0NiBMMTggMjIgTDI2IDIyIEwzMiAzMiBMMzggMjIgTDQ2IDIyIEw0NiA0NiBMNDAgNDYgTDQwIDMwIEwzNCA0MCBMMzAgNDAgTDI0IDMwIEwyNCA0NiBaIiBmaWxsPSIjZmZmZmZmIj48L3BhdGg+Cjwvc3ZnPg==" width="36" height="36" style="border-radius:50%"></div><div><div class="logo-nm">MegaFllex Auditoria</div><div class="logo-sb">Sistema de Conciliação Financeira</div></div></div><div style="margin-top:8px"><h2>'+titulo+'</h2><div style="font-size:9px;color:#6b6b67"><strong>Empresa:</strong> '+empN+' &nbsp;|&nbsp; <strong>Filial:</strong> '+filN+' &nbsp;|&nbsp; <strong>Período:</strong> '+mesN+'</div></div></div><div class="inf"><div><strong>Emitido em:</strong> '+dI+' às '+hI+'</div><div style="margin-top:3px"><strong>Total lançamentos:</strong> '+rows.length+'</div><div style="margin-top:3px"><strong>Total diferença:</strong> <span style="color:'+(tg<0?'#c0392b':tg>0?'#0a7a4e':'inherit')+';font-weight:700">'+fT(tg)+'</span></div></div></div><table><thead><tr><th>Data</th>'+th+'<th>Total dif.</th><th>Status</th></tr></thead><tbody>'+linhas+tRow+'</tbody></table><div class="leg"><div class="li"><div class="lb" style="background:#FFF3CD;border-color:#E6A817"></div>Proprietário</div><div class="li"><div class="lb" style="background:#FFD6D6;border-color:#D85A30"></div>Operador</div><div class="li"><div class="lb" style="background:#EAF3DE;border-color:#3B6D11"></div>Ok</div><div class="li"><div class="lb" style="background:#FAECE7;border-color:#993C1D"></div>Diferença</div></div><div class="rod"><span>© 2026 · MegaFllex Soluções · v0.2.0</span><span>Documento gerado automaticamente</span></div></body></html>';
+  const w=window.open('','_blank','width=1200,height=800');w.document.write(html);w.document.close();w.onload=()=>w.print();
+}
+
+
+
+// ── BACKUP ────────────────────────────────────────────────────────────────
+const BK_TABELAS=[
+  {id:'lancamentos',label:'Lançamentos'},
+  {id:'empresas',   label:'Empresas'},
+  {id:'filiais',    label:'Filiais'},
+  {id:'perfis',     label:'Perfis'},
+  {id:'campos',     label:'Campos'},
+  {id:'audit_log',  label:'Audit Log'}
+];
+let bkHistorico=[];
+
+async function renderBackup(){
+  const fb=document.getElementById('bk-fb');
+  fb.style.display='none';
+  for(const t of BK_TABELAS){
+    const el=document.getElementById('bk-ct-'+t.id);
+    if(!el)continue;
+    el.textContent='...';
+    const {count}=await sb.from(t.id).select('*',{count:'exact',head:true});
+    el.textContent=count!=null?count+' reg.':'—';
+  }
+}
+
+async function executarBackup(){
+  const selecionadas=BK_TABELAS.filter(t=>document.getElementById('bk-'+t.id)?.checked);
+  if(!selecionadas.length){
+    const fb=document.getElementById('bk-fb');
+    fb.style.display='block';fb.style.color='var(--neg)';fb.textContent='Selecione ao menos uma tabela.';return;
+  }
+  const fmt=document.querySelector('input[name="bk-fmt"]:checked')?.value||'json';
+  const btn=document.querySelector('#m-backup .btn');
+  if(btn){btn.disabled=true;btn.textContent=ld('Exportando...');}
+  const fb=document.getElementById('bk-fb');
+  fb.style.display='none';
+  try{
+    const payload={gerado_em:new Date().toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}),versao:'v0.2.0',tabelas:{}};
+    for(const t of selecionadas){
+      const {data,error}=await sb.from(t.id).select('*').order('id',{ascending:true}).limit(50000);
+      if(error)throw new Error(t.label+': '+error.message);
+      payload.tabelas[t.id]=data||[];
+    }
+    let blob,nome;
+    if(fmt==='json'){
+      blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+      nome='megafllex_backup_'+new Date().toISOString().slice(0,10)+'.json';
+    }else{
+      // CSV: apenas lançamentos
+      const rows=payload.tabelas['lancamentos']||[];
+      if(!rows.length){throw new Error('Nenhum lançamento para exportar em CSV.');}
+      const camposLabels=Object.keys(rows[0].valores||{});
+      const header=['id','empresa_id','filial_id','mes_ano','data_lanc',...camposLabels,'total_dif','criado_em'].join(';');
+      const lines=rows.map(r=>{
+        const vs=r.valores||{};
+        return[r.id,r.empresa_id,r.filial_id,r.mes_ano,r.data_lanc,...camposLabels.map(k=>String(vs[k]||'').replace(/;/g,',')),r.total_dif,r.criado_em].join(';');
+      });
+      blob=new Blob([String.fromCharCode(0xFEFF)+header+'\n'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+      nome='megafllex_lancamentos_'+new Date().toISOString().slice(0,10)+'.csv';
+    }
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=nome;a.click();URL.revokeObjectURL(url);
+    // Registrar no histórico da sessão
+    const totReg=Object.values(payload.tabelas).reduce((s,a)=>s+a.length,0);
+    bkHistorico.unshift({ts:new Date().toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}),nome,totReg,tabelas:selecionadas.map(t=>t.label).join(', ')});
+    const hEl=document.getElementById('bk-historico');
+    hEl.innerHTML=bkHistorico.map(h=>'<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--brd)">'+
+      '<span style="font-size:16px">✅</span>'+
+      '<div><div style="font-weight:500;font-size:12px">'+h.nome+'</div>'+
+      '<div style="font-size:11px;color:var(--txt2)">'+h.ts+' · '+h.totReg+' registros · '+h.tabelas+'</div></div></div>').join('');
+    fb.style.display='block';fb.style.color='var(--pos)';fb.textContent='✅ Backup gerado: '+nome;
+  }catch(e){
+    fb.style.display='block';fb.style.color='var(--neg)';fb.textContent='❌ Erro: '+e.message;
+  }finally{
+    if(btn){btn.disabled=false;btn.innerHTML='⬇️ Baixar backup';}
+  }
+}
+
+// ── IMPORTAÇÃO DE BACKUP ──────────────────────────────────────────────────
+let bkDadosImp = null;
+
+function bkLerArquivo(){
+  const file = document.getElementById('bk-imp-file').files[0];
+  if(!file) return;
+  document.getElementById('bk-imp-nome').textContent = file.name;
+  document.getElementById('bk-imp-fb').style.display = 'none';
+  document.getElementById('bk-imp-prog').style.display = 'none';
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const json = JSON.parse(e.target.result);
+      if(!json.tabelas) throw new Error('Arquivo inválido: campo "tabelas" não encontrado.');
+      bkDadosImp = json;
+      const tabelasEl = document.getElementById('bk-imp-tabelas');
+      tabelasEl.innerHTML = Object.entries(json.tabelas).map(([k,v])=>{
+        const info = BK_TABELAS.find(t=>t.id===k);
+        const label = info ? info.label : k;
+        return '<label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:0.5px solid var(--brd);border-radius:var(--r);background:var(--bg);cursor:pointer">'+
+          '<input type="checkbox" class="bk-imp-sel" data-tabela="'+k+'" checked style="width:14px;height:14px">'+
+          '<span style="font-size:12px">'+label+'</span>'+
+          '<span style="margin-left:auto;font-size:10px;color:var(--txt3)">'+v.length+' reg.</span></label>';
+      }).join('');
+      // Mostrar metadados do arquivo
+      const meta = json.gerado_em ? '<div style="font-size:11px;color:var(--txt2);margin-bottom:8px">📅 Gerado em: <strong>'+json.gerado_em+'</strong> · versão <strong>'+(json.versao||'?')+'</strong></div>' : '';
+      document.getElementById('bk-imp-tabelas').insertAdjacentHTML('beforebegin', meta);
+      document.getElementById('bk-imp-preview').style.display = 'block';
+    }catch(err){
+      bkDadosImp = null;
+      const fb = document.getElementById('bk-imp-fb');
+      fb.style.display = 'block'; fb.style.color = 'var(--neg)';
+      fb.textContent = '❌ ' + err.message;
+    }
+  };
+  reader.readAsText(file);
+}
+
+function bkCancelarImp(){
+  bkDadosImp = null;
+  document.getElementById('bk-imp-file').value = '';
+  document.getElementById('bk-imp-nome').textContent = 'Nenhum arquivo selecionado';
+  document.getElementById('bk-imp-preview').style.display = 'none';
+  document.getElementById('bk-imp-prog').style.display = 'none';
+  document.getElementById('bk-imp-fb').style.display = 'none';
+}
+
+async function bkImportar(){
+  if(!bkDadosImp) return;
+  const selecionadas = [...document.querySelectorAll('.bk-imp-sel:checked')].map(el=>el.dataset.tabela);
+  if(!selecionadas.length){
+    const fb = document.getElementById('bk-imp-fb');
+    fb.style.display='block'; fb.style.color='var(--neg)'; fb.textContent='Selecione ao menos uma tabela.'; return;
+  }
+  // Confirmação
+  if(!confirm('Importar '+selecionadas.length+' tabela(s)? Registros com mesmo ID serão atualizados.')) return;
+
+  const progEl = document.getElementById('bk-imp-prog');
+  const fbEl = document.getElementById('bk-imp-fb');
+  progEl.style.display = 'block'; fbEl.style.display = 'none';
+
+  // Desabilitar botão
+  const btn = document.querySelector('#bk-imp-preview .btn');
+  if(btn){ btn.disabled=true; btn.textContent='Importando...'; }
+
+  let totalOk=0, totalErro=0;
+  const resultados = [];
+
+  // Ordem segura de importação (dependências primeiro)
+  const ORDEM = ['campos','empresas','filiais','perfis','lancamentos','audit_log'];
+  const ordenadas = ORDEM.filter(t=>selecionadas.includes(t))
+    .concat(selecionadas.filter(t=>!ORDEM.includes(t)));
+
+  for(const tabela of ordenadas){
+    const rows = bkDadosImp.tabelas[tabela];
+    if(!rows || !rows.length){
+      resultados.push({tabela, ok:0, erro:0, msg:'Vazio'});
+      progEl.innerHTML = bkProgHTML(resultados);
+      continue;
+    }
+    progEl.innerHTML = bkProgHTML(resultados, tabela);
+    // Upsert em lotes de 500
+    const LOTE = 500;
+    let ok=0, erros=[];
+    for(let i=0; i<rows.length; i+=LOTE){
+      const lote = rows.slice(i, i+LOTE);
+      const {error} = await sb.from(tabela).upsert(lote, {onConflict:'id'});
+      if(error){ erros.push(error.message); }
+      else { ok += lote.length; }
+    }
+    totalOk += ok; totalErro += erros.length;
+    resultados.push({tabela, ok, erro:erros.length, msg: erros[0]||null});
+    progEl.innerHTML = bkProgHTML(resultados);
+  }
+
+  if(btn){ btn.disabled=false; btn.textContent='⬆️ Importar selecionadas'; }
+  fbEl.style.display='block';
+  fbEl.style.color = totalErro===0 ? 'var(--pos)' : 'var(--neg)';
+  fbEl.textContent = totalErro===0
+    ? '✅ Importação concluída — '+totalOk+' registros restaurados.'
+    : '⚠️ Concluído com erros em '+totalErro+' lote(s). Verifique acima.';
+
+  // Atualizar contagens
+  renderBackup();
+}
+
+function bkProgHTML(resultados, emAndamento){
+  const linhas = resultados.map(r=>{
+    const info = BK_TABELAS.find(t=>t.id===r.tabela);
+    const label = info ? info.label : r.tabela;
+    const ico = r.erro>0 ? '❌' : '✅';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:0.5px solid var(--brd);font-size:12px">'+
+      '<span>'+ico+'</span><span style="flex:1">'+label+'</span>'+
+      '<span style="color:var(--pos)">'+r.ok+' ok</span>'+
+      (r.erro>0?'<span style="color:var(--neg);margin-left:6px">'+r.erro+' erro</span>':'')+
+      '</div>';
+  });
+  if(emAndamento){
+    const info = BK_TABELAS.find(t=>t.id===emAndamento);
+    linhas.push('<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px">'+
+      '<span class="spinner"></span><span>'+(info?info.label:emAndamento)+'</span><span style="color:var(--txt3);margin-left:auto">importando...</span></div>');
+  }
+  return '<div style="border:0.5px solid var(--brd);border-radius:var(--r);padding:8px 12px;background:var(--bg2)">'+linhas.join('')+'</div>';
+}
+// EXPOR FUNÇÕES GLOBALMENTE (garantia)
+window.toggleZeros = toggleZeros;
+window.imprimirRelatorio = imprimirRelatorio;
+window.buildAuditHtml = buildAuditHtml;
+window.buildTable = buildTable;
+window.fazerLogin = fazerLogin;
+window.salvarEdicao = salvarEdicao;
+window.eCarregarLanc = eCarregarLanc;
+window.fCarregarHist = fCarregarHist;
+window.mCarregarLanc = mCarregarLanc;
+window.renderAuditMega = renderAuditMega;
+window.iniciarMega = iniciarMega;
+window.iniciarEmpresa = iniciarEmpresa;
+window.iniciarFilial = iniciarFilial;
+window.abrirEdit = abrirEdit;
+window.eTab = eTab;
+window.fTab = fTab;
+window.salvarLanc = salvarLanc;
+window.renderFormFilial = renderFormFilial;
+window.confirmarFilialOp = confirmarFilialOp;
+window.atualizarFiliaisOp = atualizarFiliaisOp;
+window.mostrarSeletorFilial = mostrarSeletorFilial;
+window.mTab = mTab;
+window.renderBackup = renderBackup;
+window.executarBackup = executarBackup;
+window.bkLerArquivo = bkLerArquivo;
+window.bkImportar = bkImportar;
+window.bkCancelarImp = bkCancelarImp;
+window.omTab = omTab;
+window.mAtualizaFiliais = mAtualizaFiliais;
+window.omAtualizaFiliais = omAtualizaFiliais;
+window.omCarregarLanc = omCarregarLanc;
+window.omPreencherData = omPreencherData;
+window.omSalvarLanc = omSalvarLanc;
+window.fazerLogin = fazerLogin;
+window.setTema = setTema;
+window.ciclarTema = ciclarTema;
+window.toggleSenha = toggleSenha;
+window.confirmarSaida = confirmarSaida;
+window.logout = logout;
+window.abrirModalEmpresa = abrirModalEmpresa;
+window.salvarEmpresa = salvarEmpresa;
+window.abrirModalCampo = abrirModalCampo;
+window.salvarCampo = salvarCampo;
+window.adicionarCampo = adicionarCampo;
+window.confirmarDelCampo = confirmarDelCampo;
+window.confirmarDelEmp = confirmarDelEmp;
+window.isFeriadoOuFimSemana = isFeriadoOuFimSemana;
+window.abrirObservacao = abrirObservacao;
+window.confirmarSalvarObs = confirmarSalvarObs;
+window.confirmarApagarObs = confirmarApagarObs;
+window.salvarObservacao = salvarObservacao;
+window.mostrarTip = mostrarTip;
+window.mostrarTipEl = mostrarTipEl;
+window.esconderTip = esconderTip;
+window.delEmp = delEmp;
+window.delCampo = delCampo;
+window.fecharModal = fecharModal;
+window.fFundo = fFundo;
+window.mascaraCNPJ = mascaraCNPJ;
+window.infoResetSenha = infoResetSenha;
+window.abrirTrocarSenha = abrirTrocarSenha;
+window.salvarNovaSenha = salvarNovaSenha;
+window.toggleTsSenha = toggleTsSenha;
+window.enviarResetSenha = enviarResetSenha;
+window.voltarEdit = voltarEdit;
+
+// SESSÃO
+// Carregar tema e sessão quando DOM estiver pronto
+document.addEventListener('DOMContentLoaded',()=>carregarTema());
+(async()=>{
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){uAt=session.user;await carregarCampos();await carregarPerfil();}
+})();
+</script>
+</body>
+</html>
