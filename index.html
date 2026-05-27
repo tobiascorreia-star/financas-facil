@@ -365,6 +365,8 @@ datalist{}
 .admin-btn.suspend-p{background:#F3E8FF;color:#7C3AED;border-color:#A78BFA}
 .admin-btn.suspend-d{background:#FEF3C7;color:#92400E;border-color:#F59E0B}
 .admin-btn.revoke{background:var(--red-bg);color:var(--red-dark);border-color:var(--red)}
+.admin-btn.delete{background:#1F2937;color:#fff;border-color:#111827}
+.admin-btn.delete:hover{background:#111827}
 .role-badge{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:700;display:inline-flex;align-items:center;gap:3px}
 .role-badge.pending{background:var(--amber-bg);color:var(--amber-dark)}
 .role-badge.approved{background:var(--green-bg);color:var(--green-dark)}
@@ -989,11 +991,22 @@ let _selfUpdateUntil=0,_isLoadingDB=false;
 function markSelfUpdate(){_selfUpdateUntil=Date.now()+10000;}
 function initRealtime(){
   if(realtimeSub)sb.removeChannel(realtimeSub);
-  realtimeSub=sb.channel('payments-changes').on('postgres_changes',{event:'*',schema:'public',table:'payments',filter:`user_id=eq.${currentUser.id}`},()=>{
+  // Canal com ID único por dispositivo/sessão para evitar conflito entre PC e celular
+  const channelName='payments-'+currentUser.id+'-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);
+  realtimeSub=sb.channel(channelName).on('postgres_changes',{event:'*',schema:'public',table:'payments',filter:`user_id=eq.${currentUser.id}`},()=>{
     if(Date.now()<_selfUpdateUntil)return;
     if(_isLoadingDB)return;
     loadDataFromSupabase();
   }).subscribe();
+  // Refresh manual ao voltar a aba/janela (fallback se Realtime falhar)
+  if(!window._visListener){
+    window._visListener=true;
+    document.addEventListener('visibilitychange',()=>{
+      if(document.visibilityState==='visible'&&currentUser&&!_isLoadingDB&&Date.now()>_selfUpdateUntil){
+        loadDataFromSupabase();
+      }
+    });
+  }
 }
 
 async function loadAdminUsers(){
@@ -1011,10 +1024,10 @@ function roleBadge(role){
 function adminActions(u){
   if(u.email===ADMIN_EMAIL)return`<span class="role-badge approved">👑 Admin</span>`;
   const r=u.role;let btns='';
-  if(r==='pending'){btns+=`<button class="admin-btn approve" onclick="changeUserRole('${u.id}','approved')">✅ Aprovar</button>`;btns+=`<button class="admin-btn revoke" onclick="changeUserRole('${u.id}','rejected')">❌ Reprovar</button>`;}
+  if(r==='pending'){btns+=`<button class="admin-btn approve" onclick="changeUserRole('${u.id}','approved')">✅ Aprovar</button>`;btns+=`<button class="admin-btn revoke" onclick="changeUserRole('${u.id}','rejected')">❌ Reprovar</button>`;btns+=`<button class="admin-btn delete" onclick="deleteUser('${u.id}','${(u.email||'').replace(/'/g,"\\'")}')">🗑️ Excluir</button>`;}
   else if(r==='approved'){btns+=`<button class="admin-btn suspend-p" onclick="changeUserRole('${u.id}','suspended_provisional')">⏸ Susp. prov.</button>`;btns+=`<button class="admin-btn suspend-d" onclick="changeUserRole('${u.id}','suspended_definitive')">🔒 Susp. def.</button>`;btns+=`<button class="admin-btn revoke" onclick="changeUserRole('${u.id}','rejected')">❌ Revogar</button>`;}
-  else if(r==='suspended_provisional'||r==='suspended_definitive'){btns+=`<button class="admin-btn approve" onclick="changeUserRole('${u.id}','approved')">✅ Reativar</button>`;btns+=`<button class="admin-btn revoke" onclick="changeUserRole('${u.id}','rejected')">❌ Revogar</button>`;}
-  else if(r==='rejected')btns+=`<button class="admin-btn approve" onclick="changeUserRole('${u.id}','approved')">✅ Aprovar</button>`;
+  else if(r==='suspended_provisional'||r==='suspended_definitive'){btns+=`<button class="admin-btn approve" onclick="changeUserRole('${u.id}','approved')">✅ Reativar</button>`;btns+=`<button class="admin-btn revoke" onclick="changeUserRole('${u.id}','rejected')">❌ Revogar</button>`;btns+=`<button class="admin-btn delete" onclick="deleteUser('${u.id}','${(u.email||'').replace(/'/g,"\\'")}')">🗑️ Excluir</button>`;}
+  else if(r==='rejected'){btns+=`<button class="admin-btn approve" onclick="changeUserRole('${u.id}','approved')">✅ Aprovar</button>`;btns+=`<button class="admin-btn delete" onclick="deleteUser('${u.id}','${(u.email||'').replace(/'/g,"\\'")}')">🗑️ Excluir</button>`;}
   return btns;
 }
 function renderAdminUsers(){
@@ -1035,6 +1048,16 @@ async function changeUserRole(userId,role){
   if(error){toast('❌ Erro: '+error.message,'err');return;}
   toast(msgs[role]||'Atualizado!');if(role!=='pending')_pendingCount=Math.max(0,_pendingCount-1);
   updateAdminBadge(_pendingCount);setTimeout(()=>loadAdminUsers(),500);
+}
+async function deleteUser(userId,email){
+  if(!confirm(`⚠️ EXCLUIR DEFINITIVAMENTE o usuário "${email}"?\n\nEsta ação apaga todos os dados, pagamentos e o acesso. NÃO pode ser desfeita.`))return;
+  if(!confirm(`Tem CERTEZA ABSOLUTA? Digite OK para confirmar a exclusão de "${email}".`))return;
+  const{error}=await sb.rpc('delete_user_complete',{target_user_id:userId});
+  if(error){toast('❌ Erro ao excluir: '+error.message,'err');return;}
+  toast('🗑️ Usuário excluído com sucesso!');
+  _pendingCount=adminAllUsers.filter(u=>u.role==='pending'&&u.id!==userId).length;
+  updateAdminBadge(_pendingCount);
+  setTimeout(()=>loadAdminUsers(),500);
 }
 
 'use strict';
