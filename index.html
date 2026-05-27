@@ -756,6 +756,10 @@ async function initAuth(){
 }
 
 async function handleSession(session){
+  // Limpa estado da sessão anterior (caso troca de usuário na mesma aba)
+  if(_adminNotifChannel){try{sb.removeChannel(_adminNotifChannel);}catch(e){}_adminNotifChannel=null;}
+  if(_resetsChannel){try{sb.removeChannel(_resetsChannel);}catch(e){}_resetsChannel=null;}
+  ['trial-banner','pwd-change-banner'].forEach(id=>{const el=document.getElementById(id);if(el)el.remove();});
   currentUser=session.user;
   let{data:profile}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();
   const isAdmin=currentUser.email===ADMIN_EMAIL;
@@ -841,6 +845,8 @@ async function checkStatusNow(){
 function showAuthScreen(){
   const app=document.getElementById('main-app');if(app)app.style.display='none';
   ['pending-screen','rejected-screen','suspended-screen'].forEach(id=>hide(id));
+  // Limpa banners e badges de sessões anteriores
+  ['trial-banner','pwd-change-banner'].forEach(id=>{const el=document.getElementById(id);if(el)el.remove();});
   document.getElementById('auth-overlay').style.display='flex';
 }
 function showScreen(s){
@@ -868,6 +874,13 @@ function showApp(isAdmin=false){
   const adminNav=document.getElementById('nav-admin');const adminBnav=document.getElementById('bnav-admin');
   if(adminNav)adminNav.style.display=isAdmin?'':'none';
   if(adminBnav)adminBnav.style.display=isAdmin?'flex':'none';
+  // Se não for admin, força ir para a página Painel (esconde página admin se estiver visível)
+  if(!isAdmin){
+    const pageAdmin=document.getElementById('page-admin');
+    if(pageAdmin&&pageAdmin.classList.contains('active')){
+      showPage('dash');
+    }
+  }
   loadDataFromSupabase();
   initRealtime();
   setTimeout(()=>updateUserBar(),100);
