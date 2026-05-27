@@ -853,6 +853,8 @@ function showApp(isAdmin=false){
     }
   },1500);
   if(C.onopen)setTimeout(()=>doCheck(false),1500);
+  // Exibe aviso de boas-vindas/privacidade (1x por mês)
+  setTimeout(()=>showPrivacyNotice(),800);
 }
 
 let _adminNotifChannel=null,_pendingCount=0;
@@ -1612,7 +1614,7 @@ if('serviceWorker' in navigator){
     navigator.serviceWorker.register('./sw.js',{scope:'./'})
       .then(reg=>{
         _swReg=reg;
-        console.log('SW registrado v4');
+        console.log('SW registrado v3');
 
         // Verifica atualização imediatamente
         reg.update();
@@ -1631,15 +1633,6 @@ if('serviceWorker' in navigator){
 
         // Verifica a cada 5 minutos se há atualização
         setInterval(()=>reg.update(),5*60*1000);
-
-        // Listener para mensagem SW_UPDATED — recarrega automaticamente sem banner
-        navigator.serviceWorker.addEventListener('message',e=>{
-          if(e.data?.type==='SW_UPDATED'&&!_reloading){
-            _reloading=true;
-            console.log('SW atualizou — recarregando...');
-            window.location.reload();
-          }
-        });
       })
       .catch(e=>console.warn('SW erro:',e));
 
@@ -1674,6 +1667,120 @@ function applyUpdate(){
     window.location.reload();
   }
 }
+<!-- ── AVISO DE BOAS-VINDAS / PRIVACIDADE ── -->
+<style>
+#mf-privacy-overlay{--mf-green:#1D9E75;--mf-green-hover:#0F6E56;--mf-green-deep:#085041;--mf-green-light:#E1F5EE;--mf-white:#ffffff;--mf-gray-100:#f3f4f6;--mf-gray-400:#9ca3af;--mf-gray-500:#6b7280;--mf-gray-600:#4b5563;--mf-border:#e5e7eb;--mf-radius-md:8px;--mf-radius-lg:14px;--mf-shadow:0 24px 64px rgba(0,0,0,0.16),0 4px 16px rgba(0,0,0,0.08);--mf-font:'Segoe UI','Helvetica Neue',Arial,sans-serif;position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(10,80,60,0.20);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);font-family:var(--mf-font);animation:mf-overlay-in 0.3s ease}
+@keyframes mf-overlay-in{from{opacity:0}to{opacity:1}}
+@keyframes mf-modal-in{from{opacity:0;transform:translateY(20px) scale(0.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes mf-overlay-out{from{opacity:1}to{opacity:0}}
+#mf-privacy-overlay.mf-hiding{animation:mf-overlay-out 0.28s cubic-bezier(.4,0,.2,1) forwards}
+#mf-privacy-modal{background:var(--mf-white);border-radius:var(--mf-radius-lg);box-shadow:var(--mf-shadow);width:100%;max-width:500px;overflow:hidden;animation:mf-modal-in 0.36s cubic-bezier(.4,0,.2,1)}
+#mf-privacy-overlay .mf-header{background:var(--mf-green);padding:2rem 2rem 1.75rem;text-align:center}
+#mf-privacy-overlay .mf-shield-wrap{width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,0.16);display:flex;align-items:center;justify-content:center;margin:0 auto 1.1rem}
+#mf-privacy-overlay .mf-shield-wrap svg{width:28px;height:28px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#mf-privacy-overlay .mf-header h2{color:#fff;font-size:1.15rem;font-weight:600;margin:0 0 6px;letter-spacing:-0.01em}
+#mf-privacy-overlay .mf-header p{color:rgba(255,255,255,0.82);font-size:0.86rem;margin:0;line-height:1.55}
+#mf-privacy-overlay .mf-body{padding:1.6rem 2rem 1.5rem}
+#mf-privacy-overlay .mf-intro{font-size:0.875rem;color:var(--mf-gray-600);line-height:1.7;margin:0 0 1.2rem}
+#mf-privacy-overlay .mf-items{display:flex;flex-direction:column;gap:10px;margin-bottom:1.2rem}
+#mf-privacy-overlay .mf-item{display:flex;gap:12px;align-items:flex-start;background:var(--mf-green-light);border-left:3px solid var(--mf-green);border-radius:var(--mf-radius-md);padding:12px 14px;transition:background 0.18s ease}
+#mf-privacy-overlay .mf-item:hover{background:#c5edd8}
+#mf-privacy-overlay .mf-item svg{width:19px;height:19px;stroke:var(--mf-green-hover);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;margin-top:2px}
+#mf-privacy-overlay .mf-item strong{display:block;font-size:0.81rem;font-weight:600;color:var(--mf-green-deep);margin-bottom:3px}
+#mf-privacy-overlay .mf-item span{font-size:0.79rem;color:var(--mf-green-hover);line-height:1.55}
+#mf-privacy-overlay .mf-note{background:var(--mf-gray-100);border-radius:var(--mf-radius-md);padding:11px 14px;display:flex;align-items:flex-start;gap:10px;margin-bottom:1.4rem}
+#mf-privacy-overlay .mf-note svg{width:16px;height:16px;stroke:var(--mf-gray-400);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;margin-top:1px}
+#mf-privacy-overlay .mf-note p{font-size:0.78rem;color:var(--mf-gray-500);margin:0;line-height:1.6}
+#mf-privacy-overlay .mf-btn-wrap{text-align:center}
+#mf-dismiss-btn{display:inline-flex;align-items:center;gap:8px;background:var(--mf-green);color:#fff;font-family:var(--mf-font);font-size:0.88rem;font-weight:600;border:none;border-radius:var(--mf-radius-md);padding:11px 32px;cursor:pointer;letter-spacing:0.01em;transition:background 0.18s ease,transform 0.15s ease}
+#mf-dismiss-btn svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+#mf-dismiss-btn:hover{background:var(--mf-green-hover)}
+#mf-dismiss-btn:active{transform:scale(0.97)}
+#mf-privacy-overlay .mf-footer{border-top:1px solid var(--mf-border);padding:11px 2rem;text-align:center}
+#mf-privacy-overlay .mf-footer p{font-size:0.72rem;color:var(--mf-gray-400);margin:0;display:flex;align-items:center;justify-content:center;gap:5px}
+#mf-privacy-overlay .mf-footer svg{width:12px;height:12px;stroke:var(--mf-gray-400);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+@media(max-width:520px){#mf-privacy-overlay .mf-header,#mf-privacy-overlay .mf-body,#mf-privacy-overlay .mf-footer{padding-left:1.25rem;padding-right:1.25rem}#mf-privacy-overlay .mf-header h2{font-size:1.05rem}}
+</style>
+
+<div id="mf-privacy-overlay" role="dialog" aria-modal="true" aria-labelledby="mf-dialog-title" style="display:none">
+  <div id="mf-privacy-modal">
+    <div class="mf-header">
+      <div class="mf-shield-wrap" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+      </div>
+      <h2 id="mf-dialog-title">Bem-vindo(a)<span id="mf-user-name"></span>!</h2>
+      <p>Suas informações estão protegidas e em boas mãos</p>
+    </div>
+    <div class="mf-body">
+      <p class="mf-intro">É um prazer ter você aqui! Antes de continuar, queremos que saiba que você pode utilizar o sistema com total tranquilidade:</p>
+      <div class="mf-items">
+        <div class="mf-item">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <div><strong>Sigilo total das informações</strong><span>Todos os dados cadastrados por você são estritamente confidenciais e de uso exclusivo seu.</span></div>
+        </div>
+        <div class="mf-item">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          <div><strong>Acesso restrito e exclusivo</strong><span>Nenhum outro cliente ou administrador tem acesso às suas informações cadastradas.</span></div>
+        </div>
+        <div class="mf-item">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <div><strong>Privacidade garantida</strong><span>Seu ambiente é totalmente isolado, protegido por múltiplas camadas de segurança.</span></div>
+        </div>
+      </div>
+      <div class="mf-note">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <p>Em caso de dúvidas ou qualquer necessidade, nossa equipe está sempre disponível para te ajudar.</p>
+      </div>
+      <div class="mf-btn-wrap">
+        <button id="mf-dismiss-btn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          Entendi, pode continuar
+        </button>
+      </div>
+    </div>
+    <div class="mf-footer">
+      <p><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Sistema protegido · Suas informações não são compartilhadas</p>
+    </div>
+  </div>
+</div>
+
+<script>
+function showPrivacyNotice(){
+  var KEY='mf_privacy_v1_'+((currentUser&&currentUser.id)||'x');
+  try{
+    var raw=localStorage.getItem(KEY);
+    if(raw){
+      var d=JSON.parse(raw);
+      var dias=(Date.now()-d.ts)/(1000*60*60*24);
+      if(dias<30)return; // menos de 30 dias — não mostra
+    }
+  }catch(e){}
+  var overlay=document.getElementById('mf-privacy-overlay');
+  var btn=document.getElementById('mf-dismiss-btn');
+  var nameEl=document.getElementById('mf-user-name');
+  if(!overlay||!btn)return;
+  // Insere nome do usuário
+  if(nameEl&&currentUser){
+    var nome=currentProfile&&currentProfile.full_name?currentProfile.full_name:currentUser.email.split('@')[0];
+    nameEl.textContent=', '+nome;
+  }
+  overlay.style.display='flex';
+  setTimeout(function(){if(btn)btn.focus();},100);
+  function dismiss(){
+    if(btn.disabled)return;
+    btn.disabled=true;
+    btn.innerHTML='<svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round"><polyline points="20 6 9 17 4 12"/></svg> Entendido!';
+    try{localStorage.setItem(KEY,JSON.stringify({ts:Date.now()}));}catch(e){}
+    overlay.classList.add('mf-hiding');
+    setTimeout(function(){overlay.style.display='none';overlay.classList.remove('mf-hiding');btn.disabled=false;},290);
+  }
+  btn.onclick=dismiss;
+  document.addEventListener('keydown',function esc(e){
+    if(e.key==='Escape'||e.keyCode===27){dismiss();document.removeEventListener('keydown',esc);}
+  });
+}
 </script>
+<!-- /AVISO DE BOAS-VINDAS -->
+
 </body>
 </html>
