@@ -934,8 +934,10 @@ async function loginGoogle(){const{error}=await sb.auth.signInWithOAuth({provide
 async function doLogin(){
   const email=document.getElementById('auth-email').value.trim();const pass=document.getElementById('auth-pass').value;
   if(!email||!pass){showAuthErr('Preencha e-mail e senha.');return;}
-  const{error}=await sb.auth.signInWithPassword({email,password:pass});
-  if(error)showAuthErr('E-mail ou senha incorretos.');
+  const{data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){showAuthErr('E-mail ou senha incorretos.');return;}
+  // Força redirect imediato (evita depender do onAuthStateChange que às vezes atrasa)
+  if(data?.session)await handleSession(data.session);
 }
 async function doRegister(){
   const name=document.getElementById('reg-name').value.trim();const email=document.getElementById('reg-email').value.trim();const pass=document.getElementById('reg-pass').value;
