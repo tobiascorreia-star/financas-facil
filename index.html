@@ -1110,16 +1110,19 @@ function feriadosMoveis(y){const e=easter(y);return[md(addDays(e,-48)),md(addDay
 function isFeriado(dateStr){if(!dateStr)return false;const[y,m,d]=dateStr.split('-');const mmdd=`${m}-${d}`;if(FERIADOS_FIXOS.includes(mmdd))return true;return feriadosMoveis(parseInt(y)).includes(mmdd);}
 function isWeekend(dateStr){const dw=new Date(dateStr+'T00:00:00').getDay();return dw===0||dw===6;}
 function effectiveDue(dateStr){if(!dateStr)return dateStr;let d=new Date(dateStr+'T00:00:00'),s=dateStr,safe=20;while(safe-->0){const dw=d.getDay();if(dw===6){d=addDays(d,2);}else if(dw===0){d=addDays(d,1);}else{s=iso(d);if(!isFeriado(s))break;d=addDays(d,1);}s=iso(d);}return s;}
-function diffBD(dueOrig){if(!dueOrig)return null;const due=effectiveDue(dueOrig);const s=new Date(TODAY()+'T00:00:00');const e=new Date(due+'T00:00:00');if(e<=s)return Math.round((e-s)/864e5);let count=0,cur=new Date(s);while(cur<e){cur=addDays(cur,1);const dw=cur.getDay();const cs=iso(cur);if(dw!==0&&dw!==6&&!isFeriado(cs))count++;}return count;}
+// Para IMPOSTOS: antecipa para o último dia útil anterior (não pode pagar imposto depois do vencimento)
+function effectiveDueRetro(dateStr){if(!dateStr)return dateStr;let d=new Date(dateStr+'T00:00:00'),s=dateStr,safe=20;while(safe-->0){const dw=d.getDay();if(dw===0){d=addDays(d,-2);}else if(dw===6){d=addDays(d,-1);}else{s=iso(d);if(!isFeriado(s))break;d=addDays(d,-1);}s=iso(d);}return s;}
+function effectiveDueByCategory(dateStr,category){return category==='Imposto'?effectiveDueRetro(dateStr):effectiveDue(dateStr);}
+function diffBD(dueOrig,category){if(!dueOrig)return null;const due=effectiveDueByCategory(dueOrig,category);const s=new Date(TODAY()+'T00:00:00');const e=new Date(due+'T00:00:00');if(e<=s)return Math.round((e-s)/864e5);let count=0,cur=new Date(s);while(cur<e){cur=addDays(cur,1);const dw=cur.getDay();const cs=iso(cur);if(dw!==0&&dw!==6&&!isFeriado(cs))count++;}return count;}
 
 const fmt=n=>'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtD=d=>{if(!d)return'—';const[y,m,dd]=d.split('-');return`${dd}/${m}/${y}`};
 const slbl=s=>({paid:'Pago',pending:'Pendente',overdue:'Atrasado'}[s]||s);
 const rlbl=r=>({none:'',daily:'Diário',weekly:'Semanal',monthly:'Mensal',yearly:'Anual'}[r]||'');
-const effDue=p=>p.due?effectiveDue(p.due):null;
+const effDue=p=>p.due?effectiveDueByCategory(p.due,p.category):null;
 const isOD=p=>p.status!=='paid'&&!!p.due&&effDue(p)<TODAY();
-const isW=p=>p.status!=='paid'&&!isOD(p)&&!!p.due&&diffBD(p.due)>=0&&diffBD(p.due)<=C.d1;
-const isW2=p=>!isW(p)&&!isOD(p)&&p.status!=='paid'&&C.d2&&!!p.due&&diffBD(p.due)>=0&&diffBD(p.due)<=C.d2v;
+const isW=p=>p.status!=='paid'&&!isOD(p)&&!!p.due&&diffBD(p.due,p.category)>=0&&diffBD(p.due,p.category)<=C.d1;
+const isW2=p=>!isW(p)&&!isOD(p)&&p.status!=='paid'&&C.d2&&!!p.due&&diffBD(p.due,p.category)>=0&&diffBD(p.due,p.category)<=C.d2v;
 
 const SEED=[
   {id:1,name:'Aluguel',amount:1200,owner:'João',due:'2025-05-10',paidDate:'2025-05-08',status:'paid',recur:'monthly',category:'Moradia',notes:'',archived:false},
@@ -1236,9 +1239,9 @@ function doCheck(force=false){
   if(!('Notification' in window)||Notification.permission!=='granted'){if(force)toast('Ative as notificações primeiro!','err');return;}
   const active=pays.filter(p=>!p.archived&&p.status!=='paid');
   const od=active.filter(p=>isOD(p));const w=active.filter(p=>isW(p));const w2=C.d2?active.filter(p=>isW2(p)):[];
-  if(od.length){const ns=od.slice(0,3).map(p=>{const eff=effectiveDue(p.due);return eff!==p.due?`${p.name}(→${fmtD(eff)})`:p.name;}).join(', ')+(od.length>3?'...':'');push(`🔴 ${od.length} pagamento(s) ATRASADO(S)`,`${ns}\nTotal: ${fmt(od.reduce((a,p)=>a+Number(p.amount),0))}`,'od');}
-  if(w.length){const ns=w.slice(0,3).map(p=>`${p.name}(${diffBD(p.due)===0?'hoje':diffBD(p.due)+'du'})`).join(', ');push(`⚠️ Vence(m) em até ${C.d1} dia(s) útil(eis)`,ns,'w');}
-  if(w2.length){const ns=w2.slice(0,3).map(p=>`${p.name}(${diffBD(p.due)}du)`).join(', ');push(`📅 Aviso antecipado: ${w2.length} pag.`,`Vencem em até ${C.d2v} dias úteis: ${ns}`,'w2');}
+  if(od.length){const ns=od.slice(0,3).map(p=>{const eff=effectiveDueByCategory(p.due,p.category);return eff!==p.due?`${p.name}(→${fmtD(eff)})`:p.name;}).join(', ')+(od.length>3?'...':'');push(`🔴 ${od.length} pagamento(s) ATRASADO(S)`,`${ns}\nTotal: ${fmt(od.reduce((a,p)=>a+Number(p.amount),0))}`,'od');}
+  if(w.length){const ns=w.slice(0,3).map(p=>`${p.name}(${diffBD(p.due,p.category)===0?'hoje':diffBD(p.due,p.category)+'du'})`).join(', ');push(`⚠️ Vence(m) em até ${C.d1} dia(s) útil(eis)`,ns,'w');}
+  if(w2.length){const ns=w2.slice(0,3).map(p=>`${p.name}(${diffBD(p.due,p.category)}du)`).join(', ');push(`📅 Aviso antecipado: ${w2.length} pag.`,`Vencem em até ${C.d2v} dias úteis: ${ns}`,'w2');}
   if(force&&!od.length&&!w.length&&!w2.length){
     push('FinançasFácil ✅','Tudo em dia! Nenhum vencimento próximo.','ok');
     toast('✅ Tudo em dia! Nenhum vencimento próximo.');
@@ -1256,8 +1259,8 @@ function renderDash(){
   const pend=ac.filter(p=>p.status==='pending'&&!isOD(p)).reduce((a,p)=>a+Number(p.amount),0);const odAmt=od.reduce((a,p)=>a+Number(p.amount),0);const wc=w.length+(C.d2?w2.length:0);
   const vencer=ac.filter(p=>p.status!=='paid'&&!isOD(p)&&!!p.due);const vencerAmt=vencer.reduce((a,p)=>a+Number(p.amount),0);
   const bo=document.getElementById('banner-over');const bw=document.getElementById('banner-warn');
-  if(C.visual&&od.length){bo.innerHTML=`<div class="alert-box danger"><span class="alert-ico">🔴</span><div class="alert-body"><div class="alert-title">${od.length} pagamento(s) atrasado(s) — ${fmt(odAmt)}</div>${od.slice(0,3).map(p=>{const eff=effectiveDue(p.due);const adj=eff!==p.due?` → ${fmtD(eff)}`:'';return`<div class="alert-item">• ${p.name} · ${fmtD(p.due)}${adj} · ${fmt(p.amount)}</div>`;}).join('')}</div><button class="alert-close" onclick="this.closest('.alert-box').remove()">✕</button></div>`;}else bo.innerHTML='';
-  if(C.visual&&w.length){bw.innerHTML=`<div class="alert-box warn"><span class="alert-ico">⚠️</span><div class="alert-body"><div class="alert-title">Vence(m) em até ${C.d1} dia(s) útil(eis): ${w.length} pagamento(s)</div>${w.slice(0,3).map(p=>{const bd=diffBD(p.due);const eff=effectiveDue(p.due);const adj=eff!==p.due?` → ${fmtD(eff)}`:'';return`<div class="alert-item">• ${p.name} · ${fmtD(p.due)}${adj} · ${bd===0?'Hoje':bd+'du'} · ${fmt(p.amount)}</div>`;}).join('')}</div><button class="alert-close" onclick="this.closest('.alert-box').remove()">✕</button></div>`;}else bw.innerHTML='';
+  if(C.visual&&od.length){bo.innerHTML=`<div class="alert-box danger"><span class="alert-ico">🔴</span><div class="alert-body"><div class="alert-title">${od.length} pagamento(s) atrasado(s) — ${fmt(odAmt)}</div>${od.slice(0,3).map(p=>{const eff=effectiveDueByCategory(p.due,p.category);const adj=eff!==p.due?` → ${fmtD(eff)}`:'';return`<div class="alert-item">• ${p.name} · ${fmtD(p.due)}${adj} · ${fmt(p.amount)}</div>`;}).join('')}</div><button class="alert-close" onclick="this.closest('.alert-box').remove()">✕</button></div>`;}else bo.innerHTML='';
+  if(C.visual&&w.length){bw.innerHTML=`<div class="alert-box warn"><span class="alert-ico">⚠️</span><div class="alert-body"><div class="alert-title">Vence(m) em até ${C.d1} dia(s) útil(eis): ${w.length} pagamento(s)</div>${w.slice(0,3).map(p=>{const bd=diffBD(p.due,p.category);const eff=effectiveDueByCategory(p.due,p.category);const adj=eff!==p.due?` → ${fmtD(eff)}`:'';return`<div class="alert-item">• ${p.name} · ${fmtD(p.due)}${adj} · ${bd===0?'Hoje':bd+'du'} · ${fmt(p.amount)}</div>`;}).join('')}</div><button class="alert-close" onclick="this.closest('.alert-box').remove()">✕</button></div>`;}else bw.innerHTML='';
   document.getElementById('metrics').innerHTML=`<div class="mc"><div class="mc-label">💳 Total geral</div><div class="mc-val b">${fmt(total)}</div></div><div class="mc"><div class="mc-label">✅ Pagos</div><div class="mc-val g">${fmt(paid)}</div></div><div class="mc"><div class="mc-label">⏳ Pendentes</div><div class="mc-val a">${fmt(pend)}</div></div><div class="mc"><div class="mc-label">🔴 Atrasados</div><div class="mc-val r">${fmt(odAmt)}</div></div><div class="mc" style="cursor:pointer" onclick="showPage('pay');setF('warn',document.querySelector('.fc'))"><div class="mc-label">⚠️ A vencer</div><div class="mc-val a">${fmt(vencerAmt)}</div><div style="font-size:10px;color:var(--text3);margin-top:2px">${vencer.length} item(s)</div></div>`;
   const up=ac.filter(p=>p.status!=='paid').sort((a,b)=>(a.due||'').localeCompare(b.due||'')).slice(0,7);
   document.getElementById('upcoming').innerHTML=up.length?up.map(p=>pitem(p,true)).join(''):`<div class="empty"><span class="empty-icon">🎉</span><p>Tudo em dia! Nenhum pendente.</p></div>`;
@@ -1265,8 +1268,8 @@ function renderDash(){
 
 function pitem(p,mini=false){
   const od=isOD(p),w=isW(p),w2=isW2(p);const st=od?'overdue':p.status;const cls=w||w2?'warn':st;const isPaid=p.status==='paid';
-  const bdu=p.due?diffBD(p.due):null;const bduLabel=bdu===null?'':bdu===0?'Hoje':bdu<0?`${Math.abs(bdu)}du atrás`:`${bdu}du`;
-  const eff=p.due?effectiveDue(p.due):null;const wasAdjusted=eff&&eff!==p.due;
+  const bdu=p.due?diffBD(p.due,p.category):null;const bduLabel=bdu===null?'':bdu===0?'Hoje':bdu<0?`${Math.abs(bdu)}du atrás`:`${bdu}du`;
+  const eff=p.due?effectiveDueByCategory(p.due,p.category):null;const wasAdjusted=eff&&eff!==p.due;
   const circleSVG=`<svg viewBox="0 0 14 14" fill="none"><polyline points="2,7 5.5,10.5 12,3.5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   const circle=`<button class="qp-circle${isPaid?' done':''}" onclick="quickPay(${p.id})" title="${isPaid?'Clique para desmarcar':'Marcar como pago agora'}">${circleSVG}</button>`;
   const wtag=w?`<span class="wtag">⚠ ${bdu===0?'Hoje':bdu+'du'}</span>`:w2?`<span class="wtag bd-badge">${bdu}du</span>`:'';
@@ -1372,7 +1375,7 @@ function renderCfgPreview(){
   const{od,w,w2}=alerts();const all=[...od.map(p=>({...p,_t:'od'})),...w.map(p=>({...p,_t:'w'})),...w2.map(p=>({...p,_t:'w2'}))].sort((a,b)=>(a.due||'').localeCompare(b.due||''));
   const el=document.getElementById('cfg-preview');
   if(!all.length){el.innerHTML=`<div class="empty" style="padding:1rem 0"><span class="empty-icon">✅</span><p>Nenhum vencimento próximo.</p></div>`;return;}
-  el.innerHTML=`<div class="plist" style="margin-top:6px">${all.map(p=>{const bd=p.due?diffBD(p.due):null;const eff=p.due?effectiveDue(p.due):null;const wasAdj=eff&&eff!==p.due;const dl=bd===null?'':bd===0?'Hoje':bd<0?`${Math.abs(bd)}du atrás`:`${bd}du`;const col=p._t==='od'?'var(--red-dark)':p._t==='w'?'var(--amber-dark)':'var(--blue-dark)';const dateDisplay=wasAdj?`<s style="opacity:.45;font-size:10px">${fmtD(p.due)}</s> → ${fmtD(eff)} <span style="font-size:10px;background:var(--blue-bg);color:var(--blue-dark);border-radius:20px;padding:1px 5px">1° dia útil</span>`:fmtD(p.due);return`<div class="pi ${p._t==='od'?'overdue':p._t==='w'?'warn':'pending'}" style="padding:9px 12px"><div class="pico ${p._t==='od'?'overdue':'pending'}">${p._t==='od'?'🔴':'⚠️'}</div><div class="pi-info"><div class="pi-name"><span class="nm">${p.name}</span></div><div class="pi-meta"><span>📅 ${dateDisplay}</span>${p.owner?`<span>👤 ${p.owner}</span>`:''}</div></div><div class="pi-right"><div class="pi-amt" style="color:${col}">${fmt(p.amount)}</div><span style="font-size:11px;font-weight:600;color:${col}">${dl}</span></div></div>`;}).join('')}</div>`;
+  el.innerHTML=`<div class="plist" style="margin-top:6px">${all.map(p=>{const bd=p.due?diffBD(p.due,p.category):null;const eff=p.due?effectiveDueByCategory(p.due,p.category):null;const wasAdj=eff&&eff!==p.due;const dl=bd===null?'':bd===0?'Hoje':bd<0?`${Math.abs(bd)}du atrás`:`${bd}du`;const col=p._t==='od'?'var(--red-dark)':p._t==='w'?'var(--amber-dark)':'var(--blue-dark)';const dateDisplay=wasAdj?`<s style="opacity:.45;font-size:10px">${fmtD(p.due)}</s> → ${fmtD(eff)} <span style="font-size:10px;background:var(--blue-bg);color:var(--blue-dark);border-radius:20px;padding:1px 5px">1° dia útil</span>`:fmtD(p.due);return`<div class="pi ${p._t==='od'?'overdue':p._t==='w'?'warn':'pending'}" style="padding:9px 12px"><div class="pico ${p._t==='od'?'overdue':'pending'}">${p._t==='od'?'🔴':'⚠️'}</div><div class="pi-info"><div class="pi-name"><span class="nm">${p.name}</span></div><div class="pi-meta"><span>📅 ${dateDisplay}</span>${p.owner?`<span>👤 ${p.owner}</span>`:''}</div></div><div class="pi-right"><div class="pi-amt" style="color:${col}">${fmt(p.amount)}</div><span style="font-size:11px;font-weight:600;color:${col}">${dl}</span></div></div>`;}).join('')}</div>`;
 }
 
 function showPage(p){
