@@ -331,6 +331,7 @@ datalist{}
 
 /* AUTH */
 .auth-overlay{position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;align-items:center;justify-content:center;padding:1rem}
+@keyframes spin{to{transform:rotate(360deg)}}
 .auth-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;width:100%;max-width:400px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.12)}
 .auth-logo{font-size:48px;margin-bottom:.5rem}
 .auth-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;font-size:14px;color:var(--text);transition:border .2s;margin-bottom:10px}
@@ -665,7 +666,14 @@ datalist{}
   </div>
 </div>
 
-<div class="auth-overlay" id="auth-overlay" style="display:none">
+<div class="auth-overlay" id="auth-overlay" style="display:flex">
+  <!-- Spinner de carregamento inicial -->
+  <div id="auth-loading-spinner" style="position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:600;gap:1rem">
+    <div style="font-size:48px">💰</div>
+    <div style="font-size:18px;font-weight:700;color:var(--text)">FinançasFácil</div>
+    <div style="width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin 0.7s linear infinite"></div>
+    <div style="font-size:13px;color:var(--text2)">Carregando...</div>
+  </div>
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:400px;padding:2rem;text-align:center">
     <div style="font-size:52px;margin-bottom:.5rem">💰</div>
     <div style="font-size:20px;font-weight:700;margin-bottom:.25rem">FinançasFácil</div>
@@ -742,7 +750,10 @@ let currentUser=null,currentProfile=null,realtimeSub=null;
 let adminAllUsers=[],adminFilter_='all';
 
 async function initAuth(){
+  const spinner=document.getElementById('auth-loading-spinner');
+  if(spinner)spinner.style.display='flex';
   const{data:{session}}=await sb.auth.getSession();
+  if(spinner)spinner.style.display='none';
   if(session)await handleSession(session);
   else showAuthScreen();
   sb.auth.onAuthStateChange(async(event,session)=>{
@@ -1675,9 +1686,9 @@ function applyUpdate(){
 @keyframes mf-modal-in{from{opacity:0;transform:translateY(20px) scale(0.97)}to{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes mf-overlay-out{from{opacity:1}to{opacity:0}}
 #mf-privacy-overlay.mf-hiding{animation:mf-overlay-out 0.28s cubic-bezier(.4,0,.2,1) forwards}
-#mf-privacy-modal{background:var(--mf-white);border-radius:var(--mf-radius-lg);box-shadow:var(--mf-shadow);width:100%;max-width:500px;max-height:88vh;overflow-y:auto;display:flex;flex-direction:column;animation:mf-modal-in 0.36s cubic-bezier(.4,0,.2,1)}
-#mf-privacy-overlay .mf-header{background:var(--mf-green);padding:1.1rem 1.5rem 1rem;text-align:center;flex-shrink:0}
-#mf-privacy-overlay .mf-shield-wrap{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,0.16);display:flex;align-items:center;justify-content:center;margin:0 auto 0.5rem}
+#mf-privacy-modal{background:var(--mf-white);border-radius:var(--mf-radius-lg);box-shadow:var(--mf-shadow);width:100%;max-width:500px;overflow:hidden;animation:mf-modal-in 0.36s cubic-bezier(.4,0,.2,1)}
+#mf-privacy-overlay .mf-header{background:var(--mf-green);padding:2rem 2rem 1.75rem;text-align:center}
+#mf-privacy-overlay .mf-shield-wrap{width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,0.16);display:flex;align-items:center;justify-content:center;margin:0 auto 1.1rem}
 #mf-privacy-overlay .mf-shield-wrap svg{width:28px;height:28px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #mf-privacy-overlay .mf-header h2{color:#fff;font-size:1.15rem;font-weight:600;margin:0 0 6px;letter-spacing:-0.01em}
 #mf-privacy-overlay .mf-header p{color:rgba(255,255,255,0.82);font-size:0.86rem;margin:0;line-height:1.55}
@@ -1700,7 +1711,7 @@ function applyUpdate(){
 #mf-privacy-overlay .mf-footer{border-top:1px solid var(--mf-border);padding:11px 2rem;text-align:center}
 #mf-privacy-overlay .mf-footer p{font-size:0.72rem;color:var(--mf-gray-400);margin:0;display:flex;align-items:center;justify-content:center;gap:5px}
 #mf-privacy-overlay .mf-footer svg{width:12px;height:12px;stroke:var(--mf-gray-400);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
-@media(max-width:520px){#mf-privacy-overlay{padding:0.5rem;align-items:flex-start;padding-top:max(0.5rem,env(safe-area-inset-top))}#mf-privacy-modal{max-height:calc(100vh - 1rem);border-radius:12px}#mf-privacy-overlay .mf-header,#mf-privacy-overlay .mf-body,#mf-privacy-overlay .mf-footer{padding-left:1rem;padding-right:1rem}#mf-privacy-overlay .mf-header h2{font-size:1rem}#mf-privacy-overlay .mf-body{padding-top:1rem;padding-bottom:1rem}#mf-privacy-overlay .mf-items{gap:7px;margin-bottom:0.9rem}#mf-privacy-overlay .mf-note{margin-bottom:1rem}#mf-privacy-overlay .mf-intro{margin-bottom:0.9rem}}
+@media(max-width:520px){#mf-privacy-overlay .mf-header,#mf-privacy-overlay .mf-body,#mf-privacy-overlay .mf-footer{padding-left:1.25rem;padding-right:1.25rem}#mf-privacy-overlay .mf-header h2{font-size:1.05rem}}
 </style>
 
 <div id="mf-privacy-overlay" role="dialog" aria-modal="true" aria-labelledby="mf-dialog-title" style="display:none">
