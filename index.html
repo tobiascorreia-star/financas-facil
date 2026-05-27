@@ -677,15 +677,15 @@ datalist{}
     <div class="auth-divider">ou</div>
     <div id="auth-err" class="auth-err"></div>
     <div id="form-login">
-      <input class="auth-input" id="auth-email" type="email" placeholder="Seu e-mail">
-      <div style="position:relative"><input class="auth-input" id="auth-pass" type="password" placeholder="Senha" onkeydown="if(event.key==='Enter')doLogin()" style="padding-right:42px"><button onclick="togglePass('auth-pass',this)" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text2);font-size:18px;padding:0;line-height:1">👁</button></div>
+      <input class="auth-input" id="auth-email" type="email" placeholder="Seu e-mail" autocomplete="username" name="email">
+      <div style="position:relative"><input class="auth-input" id="auth-pass" type="password" placeholder="Senha" autocomplete="current-password" name="password" onkeydown="if(event.key==='Enter')doLogin()" style="padding-right:42px"><button onclick="togglePass('auth-pass',this)" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text2);font-size:18px;padding:0;line-height:1">👁</button></div>
       <button class="auth-btn primary" onclick="doLogin()">Entrar</button>
       <button class="auth-btn secondary" onclick="switchForm('register')">Criar conta</button>
     </div>
     <div id="form-register" style="display:none">
       <input class="auth-input" id="reg-name" type="text" placeholder="Seu nome completo">
-      <input class="auth-input" id="reg-email" type="email" placeholder="Seu e-mail">
-      <div style="position:relative"><input class="auth-input" id="reg-pass" type="password" placeholder="Senha (mín. 6 caracteres)" onkeydown="if(event.key==='Enter')doRegister()" style="padding-right:42px"><button onclick="togglePass('reg-pass',this)" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text2);font-size:18px;padding:0;line-height:1">👁</button></div>
+      <input class="auth-input" id="reg-email" type="email" placeholder="Seu e-mail" autocomplete="email" name="email">
+      <div style="position:relative"><input class="auth-input" id="reg-pass" type="password" placeholder="Senha (mín. 6 caracteres)" autocomplete="new-password" name="new-password" onkeydown="if(event.key==='Enter')doRegister()" style="padding-right:42px"><button onclick="togglePass('reg-pass',this)" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text2);font-size:18px;padding:0;line-height:1">👁</button></div>
       <button class="auth-btn primary" onclick="doRegister()">Criar conta</button>
       <button class="auth-btn secondary" onclick="switchForm('login')">Já tenho conta</button>
     </div>
