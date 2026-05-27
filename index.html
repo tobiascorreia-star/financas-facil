@@ -599,7 +599,9 @@ datalist{}
 
   <div class="page" id="page-admin">
     <div class="sec-hdr"><span class="sec-title">👑 Painel Administrativo</span><span style="font-size:11px;color:var(--text2)" id="admin-count"></span></div>
-    <div class="filters" style="margin-bottom:1rem">
+    <div class="filters" style="margin-bottom:1rem;flex-wrap:wrap">
+      <button class="fc active" onclick="adminView('users',this)" id="av-users">👥 Usuários</button>
+      <button class="fc" onclick="adminView('resets',this)" id="av-resets">🔑 Senhas <span id="reset-badge" style="display:none;background:#E24B4A;color:#fff;border-radius:50%;padding:1px 6px;font-size:9px;margin-left:3px"></span></button>
       <button class="fc active" onclick="adminFilter('all',this)">Todos</button>
       <button class="fc" onclick="adminFilter('pending',this)">⏳ Pendentes</button>
       <button class="fc" onclick="adminFilter('approved',this)">✅ Aprovados</button>
@@ -607,6 +609,7 @@ datalist{}
       <button class="fc" onclick="adminFilter('rejected',this)">❌ Reprovados</button>
     </div>
     <div id="admin-users-list"><div class="empty"><span class="empty-icon">⏳</span><p>Carregando usuários...</p></div></div>
+    <div id="admin-resets-list" style="display:none"></div>
   </div>
 </div>
 </div>
@@ -845,6 +848,20 @@ function showScreen(s){
   hide('auth-overlay');hide('pending-screen');hide('rejected-screen');hide('suspended-screen');
   const el=document.getElementById(s+'-screen');if(el)el.style.display='flex';
 }
+async function openChangePasswordModal(){
+  const newPwd=prompt('🔐 Digite sua nova senha (mínimo 6 caracteres):');
+  if(!newPwd)return;
+  if(newPwd.length<6){alert('❌ Senha precisa ter pelo menos 6 caracteres.');return;}
+  const confirm2=prompt('Confirme a nova senha:');
+  if(newPwd!==confirm2){alert('❌ As senhas não conferem.');return;}
+  const{error}=await sb.auth.updateUser({password:newPwd});
+  if(error){toast('❌ Erro ao trocar senha: '+error.message,'err');return;}
+  await sb.rpc('mark_password_changed');
+  currentProfile.must_change_password=false;
+  updateUserBar();
+  toast('✅ Senha alterada com sucesso!');
+}
+
 function showApp(isAdmin=false){
   ['auth-overlay','pending-screen','rejected-screen','suspended-screen'].forEach(id=>hide(id));
   const app=document.getElementById('main-app');if(app)app.style.display='block';
@@ -905,6 +922,22 @@ function updateUserBar(){
   const isMobile=window.innerWidth<=600;
   const name=isMobile?(full.split(' ')[0]):(full);
   btn.textContent=name+(isAdmin?' 👑':'');
+  // Banner de senha temporária — quando o usuário precisa trocar a senha
+  const mustChange=currentProfile?.must_change_password===true;
+  let pwdBanner=document.getElementById('pwd-change-banner');
+  if(mustChange){
+    if(!pwdBanner){
+      pwdBanner=document.createElement('div');
+      pwdBanner.id='pwd-change-banner';
+      pwdBanner.style.cssText='background:#FEF2F2;border-bottom:2px solid #E24B4A;padding:8px 1rem;text-align:center;font-size:12px;color:#A32D2D;font-weight:600;position:sticky;top:54px;z-index:99;cursor:pointer';
+      pwdBanner.onclick=openChangePasswordModal;
+      const topbar=document.querySelector('.topbar');
+      if(topbar)topbar.insertAdjacentElement('afterend',pwdBanner);
+    }
+    pwdBanner.innerHTML='⚠️ Sua senha foi redefinida pelo administrador. <u>Clique aqui para trocar agora</u> 🔐';
+  }else if(pwdBanner){
+    pwdBanner.remove();
+  }
   // Banner de trial — mostra dias restantes para usuários em período de avaliação
   const trialUntil=currentProfile?.trial_until?new Date(currentProfile.trial_until):null;
   const isTrial=currentProfile?.role==='trial'&&trialUntil&&trialUntil>new Date();
@@ -951,8 +984,9 @@ async function doRegister(){
 async function doForgotPassword(){
   const email=document.getElementById('auth-email').value.trim();
   if(!email){showAuthErr('Digite seu e-mail primeiro.');return;}
-  await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.href});
-  showAuthErr('✅ Link de redefinição enviado para '+email,'green');
+  const{error}=await sb.rpc('request_password_reset',{req_email:email});
+  if(error){showAuthErr('Erro ao enviar solicitação: '+error.message);return;}
+  showAuthErr('📬 Solicitação enviada ao administrador! Em breve sua senha será redefinida. Aguarde contato pelo WhatsApp (85) 3342-0007.','green');
 }
 async function sbSignOut(){
   stopStatusPolling();
@@ -1093,6 +1127,75 @@ async function deleteUser(userId,email){
   _pendingCount=adminAllUsers.filter(u=>u.role==='pending'&&u.id!==userId).length;
   updateAdminBadge(_pendingCount);
   setTimeout(()=>loadAdminUsers(),500);
+}
+
+// ── Sistema de reset de senha (Admin) ────────────────────
+let adminAllResets=[],_adminCurrentView='users',_resetsChannel=null;
+function adminView(view,el){
+  _adminCurrentView=view;
+  document.querySelectorAll('#av-users,#av-resets').forEach(e=>e.classList.remove('active'));
+  if(el)el.classList.add('active');
+  document.getElementById('admin-users-list').style.display=view==='users'?'':'none';
+  document.getElementById('admin-resets-list').style.display=view==='resets'?'':'none';
+  // Esconde filtros de role quando estiver em resets
+  document.querySelectorAll('#page-admin .fc:not(#av-users):not(#av-resets)').forEach(e=>e.style.display=view==='users'?'':'none');
+  if(view==='resets')loadAdminResets();
+}
+async function loadAdminResets(){
+  const{data,error}=await sb.from('password_reset_requests').select('*').order('created_at',{ascending:false});
+  if(error){document.getElementById('admin-resets-list').innerHTML=`<div class="empty"><span class="empty-icon">❌</span><p>Erro: ${error.message}</p></div>`;return;}
+  adminAllResets=data||[];renderAdminResets();
+}
+function renderAdminResets(){
+  const el=document.getElementById('admin-resets-list');
+  if(!adminAllResets.length){el.innerHTML=`<div class="empty"><span class="empty-icon">🔑</span><p>Nenhuma solicitação de redefinição.</p></div>`;return;}
+  el.innerHTML=adminAllResets.map(r=>{
+    const ini=(r.full_name||r.email||'?').charAt(0).toUpperCase();
+    const name=r.full_name||r.email.split('@')[0];
+    const date=new Date(r.created_at).toLocaleString('pt-BR');
+    const stBadge=r.status==='pending'?`<span class="role-badge pending">⏳ Pendente</span>`:r.status==='done'?`<span class="role-badge approved">✅ Atendida</span>`:`<span class="role-badge rejected">⊘ Ignorada</span>`;
+    const pwdInfo=r.status==='done'&&r.new_password?`<div style="font-size:11px;background:var(--green-bg);color:var(--green-dark);border-radius:6px;padding:6px 10px;margin-top:6px;font-family:monospace">🔐 Senha gerada: <strong>${r.new_password}</strong> <button onclick="navigator.clipboard.writeText('${r.new_password}');toast('📋 Copiado!')" style="background:none;border:none;cursor:pointer;font-size:13px;margin-left:4px">📋</button></div>`:'';
+    let btns='';
+    if(r.status==='pending'){
+      btns=`<button class="admin-btn approve" onclick="doResetPassword('${r.id}','${r.email}')">🔄 Resetar senha</button><button class="admin-btn revoke" onclick="doIgnoreReset('${r.id}')">❌ Ignorar</button>`;
+    }
+    return`<div class="admin-user-card"><div class="admin-user-top"><div class="admin-avatar">${ini}</div><div class="admin-user-info"><div class="admin-user-name">${name}</div><div class="admin-user-email">${r.email}</div><div class="admin-user-date">Solicitado: ${date}</div></div></div>${pwdInfo}<div class="admin-user-bottom" style="margin-top:10px"><div>${stBadge}</div><div class="admin-actions">${btns}</div></div></div>`;
+  }).join('');
+}
+async function doResetPassword(reqId,email){
+  if(!confirm(`Resetar a senha de "${email}"?\nUma nova senha de 6 dígitos será gerada.`))return;
+  const{data,error}=await sb.rpc('admin_reset_password',{request_id:reqId});
+  if(error){toast('❌ Erro: '+error.message,'err');return;}
+  if(data&&data.password){
+    toast(`✅ Senha redefinida: ${data.password}`);
+    alert(`🔐 Nova senha gerada para ${email}:\n\n${data.password}\n\nEntre em contato pelo WhatsApp (85) 3342-0007 para informar o cliente.\n\nA senha foi copiada — basta colar.`);
+    try{await navigator.clipboard.writeText(data.password);}catch(e){}
+  }
+  loadAdminResets();updateResetBadge();
+}
+async function doIgnoreReset(reqId){
+  if(!confirm('Ignorar essa solicitação? O cliente terá que solicitar novamente.'))return;
+  const{error}=await sb.rpc('admin_ignore_reset',{request_id:reqId});
+  if(error){toast('❌ Erro: '+error.message,'err');return;}
+  toast('Solicitação ignorada.');
+  loadAdminResets();updateResetBadge();
+}
+async function updateResetBadge(){
+  const{count}=await sb.from('password_reset_requests').select('*',{count:'exact',head:true}).eq('status','pending');
+  const badge=document.getElementById('reset-badge');
+  if(badge){badge.textContent=count||'';badge.style.display=count>0?'inline-block':'none';}
+}
+function initResetNotifier(){
+  if(_resetsChannel){try{sb.removeChannel(_resetsChannel);}catch(e){}}
+  _resetsChannel=sb.channel('admin-password-resets');
+  _resetsChannel.on('postgres_changes',{event:'INSERT',schema:'public',table:'password_reset_requests'},payload=>{
+    const r=payload.new;if(!r)return;
+    push('🔑 Nova solicitação de senha!',`${r.full_name||r.email} solicitou redefinição de senha.`,'reset-'+Date.now());
+    toast(`🔑 Reset solicitado: ${r.email}`);
+    updateResetBadge();
+    if(document.getElementById('page-admin')?.classList.contains('active')&&_adminCurrentView==='resets')loadAdminResets();
+  });
+  _resetsChannel.subscribe();
 }
 
 'use strict';
