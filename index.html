@@ -692,7 +692,7 @@ datalist{}
       <button class="auth-btn primary" onclick="doRegister()">Criar conta</button>
       <button class="auth-btn secondary" onclick="switchForm('login')">Já tenho conta</button>
     </div>
-    <div class="auth-toggle"><span id="forgot-link" style="display:none"><a onclick="doForgotPassword()">Esqueci minha senha</a></span></div>
+    <div class="auth-toggle"><span id="forgot-link"><a onclick="doForgotPassword()" style="cursor:pointer">Esqueci minha senha</a></span></div>
     <div style="margin-top:12px;font-size:10px;color:var(--text3);opacity:0.6">v2.1</div>
   </div>
 </div>
@@ -960,7 +960,8 @@ function updateUserBar(){
 function switchForm(f){
   document.getElementById('form-login').style.display=f==='login'?'':'none';
   document.getElementById('form-register').style.display=f==='register'?'':'none';
-  document.getElementById('forgot-link').style.display=f==='login'?'':'none';
+  const fl=document.getElementById('forgot-link');
+  if(fl)fl.style.display=f==='login'?'':'none';
   document.getElementById('auth-err').style.display='none';
 }
 function togglePass(id,btn){const inp=document.getElementById(id);if(!inp)return;const show=inp.type==='password';inp.type=show?'text':'password';btn.textContent=show?'🙈':'👁';}
@@ -977,9 +978,11 @@ async function doRegister(){
   const name=document.getElementById('reg-name').value.trim();const email=document.getElementById('reg-email').value.trim();const pass=document.getElementById('reg-pass').value;
   if(!name||!email||!pass){showAuthErr('Preencha todos os campos.');return;}
   if(pass.length<6){showAuthErr('Senha mínima: 6 caracteres.');return;}
-  const{error}=await sb.auth.signUp({email,password:pass,options:{data:{full_name:name}}});
-  if(error)showAuthErr(error.message);
-  else showAuthErr('✅ Conta criada! Aguarde aprovação do administrador.','green');
+  const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{full_name:name}}});
+  if(error){showAuthErr(error.message);return;}
+  showAuthErr('✅ Conta criada! Período de avaliação: 7 dias.','green');
+  // Se já veio com sessão (auto-confirmado), entra direto
+  if(data?.session)await handleSession(data.session);
 }
 async function doForgotPassword(){
   const email=document.getElementById('auth-email').value.trim();
@@ -1888,7 +1891,7 @@ function applyUpdate(){
       </div>
     </div>
     <div class="mf-footer">
-      <p><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Sistema protegido · Suas informações não são compartilhadas</p>
+      <p><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Sistema protegido · Suas informações não são compartilhadas</p><p style="margin-top:6px;font-size:0.7rem;color:#9ca3af"><a href="https://wa.me/558533420007" target="_blank" style="color:#25D366;text-decoration:none;display:inline-flex;align-items:center;gap:4px"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>Informações: (85) 3342-0007</a></p>
     </div>
   </div>
 </div>
