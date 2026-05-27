@@ -754,15 +754,23 @@ async function initAuth(){
 async function handleSession(session){
   currentUser=session.user;
   let{data:profile}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();
+  const isAdmin=currentUser.email===ADMIN_EMAIL;
+  const trialExp=new Date(Date.now()+7*24*60*60*1000).toISOString();
   if(!profile){
-    const trialExp=new Date(Date.now()+7*24*60*60*1000).toISOString();
     const{data:newProfile}=await sb.from('profiles').upsert({
       id:currentUser.id,email:currentUser.email,
       full_name:currentUser.user_metadata?.full_name||currentUser.email.split('@')[0],
-      role:currentUser.email===ADMIN_EMAIL?'approved':'trial',
-      trial_until:currentUser.email===ADMIN_EMAIL?null:trialExp
+      role:isAdmin?'approved':'trial',
+      trial_until:isAdmin?null:trialExp
     },{onConflict:'id'}).select().single();
     profile=newProfile;
+  } else if(!isAdmin && profile.role==='pending' && !profile.trial_until){
+    // Perfil criado por trigger antigo sem trial — converte para trial
+    const{data:updProfile}=await sb.from('profiles').update({
+      role:'trial',
+      trial_until:trialExp
+    }).eq('id',currentUser.id).select().single();
+    if(updProfile)profile=updProfile;
   }
   currentProfile=profile;
   if(currentUser.email===ADMIN_EMAIL){showApp(true);return;}
