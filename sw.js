@@ -1,7 +1,7 @@
-// FinançasFácil — Service Worker v4.0
+// FinançasFácil — Service Worker v5.0
 // ESTRATÉGIA: Network-first para HTML (sempre versão mais recente)
 //             Cache-first para assets estáticos (ícones, manifest)
-const CACHE_NAME = 'financas-facil-v4';
+const CACHE_NAME = 'financas-facil-v5';
 const STATIC_ASSETS = ['./manifest.json', './icon.svg'];
 
 // ── INSTALAÇÃO ────────────────────────────────────────────
@@ -9,7 +9,7 @@ self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME)
       .then(c => c.addAll(STATIC_ASSETS))
-      .then(() => self.skipWaiting()) // ativa imediatamente sem esperar fechar abas
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -25,7 +25,6 @@ self.addEventListener('activate', e => {
       ))
       .then(() => self.clients.claim())
       .then(() => {
-        // Notifica todas as abas abertas para recarregar ao ativar nova versão
         return self.clients.matchAll({ type: 'window', includeUncontrolled: true })
           .then(clients => {
             clients.forEach(client => {
@@ -42,16 +41,14 @@ self.addEventListener('fetch', e => {
 
   const url = e.request.url;
 
-  // Nunca cacheia chamadas ao Supabase
   if (url.includes('supabase.co')) return;
 
-  // ── HTML: SEMPRE network-first ────────────────────────
   if (e.request.destination === 'document' ||
       url.endsWith('/') ||
       url.endsWith('/index.html') ||
       url.endsWith('.html')) {
     e.respondWith(
-      fetch(e.request, { cache: 'no-store' }) // força buscar do servidor, nunca do cache HTTP
+      fetch(e.request, { cache: 'no-store' })
         .then(response => {
           if (response.ok) {
             const clone = response.clone();
@@ -60,7 +57,6 @@ self.addEventListener('fetch', e => {
           return response;
         })
         .catch(() => {
-          // Offline: usa cache como fallback
           return caches.match(e.request)
             .then(cached => cached || caches.match('./'));
         })
@@ -68,7 +64,6 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // ── Outros assets: cache-first (manifest, icon) ───────
   e.respondWith(
     caches.match(e.request)
       .then(cached => {
