@@ -834,7 +834,7 @@ function showApp(isAdmin=false){
   loadDataFromSupabase();
   initRealtime();
   setTimeout(()=>updateUserBar(),100);
-  if(isAdmin)initAdminNotifier();
+  if(isAdmin){initAdminNotifier();initResetNotifier();}
   initPin();
   updateBell();
   setTimeout(async()=>{
