@@ -374,6 +374,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </head>
 <body>
 
+<div id="loading-screen" style="position:fixed;inset:0;background:var(--bg);z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem">
+  <div style="font-size:52px;animation:pulse 1.5s infinite">💰</div>
+  <div style="font-size:18px;font-weight:700;color:var(--text)">FinançasFácil</div>
+  <div style="font-size:13px;color:var(--text2)">Carregando...</div>
+  <div style="width:40px;height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:8px">
+    <div id="loading-bar" style="height:100%;width:0%;background:var(--green);border-radius:2px;transition:width 2s ease"></div>
+  </div>
+</div>
 <div id="main-app" style="display:none">
 <div class="topbar">
   <div class="topbar-logo">💰 <span>Finanças</span>Fácil <span class="sync-dot ok" id="sync-dot" title="Sincronizado"></span></div>
@@ -771,6 +779,7 @@ async function checkStatusNow(){
 }
 
 function showAuthScreen(){
+  const ls=document.getElementById('loading-screen');if(ls)ls.style.display='none';
   const app=document.getElementById('main-app');if(app)app.style.display='none';
   ['pending-screen','rejected-screen','suspended-screen'].forEach(id=>hide(id));
   ['trial-banner','pwd-change-banner'].forEach(id=>{const el=document.getElementById(id);if(el)el.remove();});
@@ -831,6 +840,9 @@ function showApp(isAdmin=false){
   if(currentProfile?.must_change_password===true&&!isAdmin){
     setTimeout(()=>forceChangePassword(),300);
   }
+  // Oculta loading screen
+  const ls=document.getElementById('loading-screen');
+  if(ls){ls.style.opacity='0';ls.style.transition='opacity .3s';setTimeout(()=>ls.style.display='none',300);}
   loadDataFromSupabase();
   initRealtime();
   setTimeout(()=>updateUserBar(),100);
@@ -1712,6 +1724,18 @@ applyC();
 updateBell();
 window.addEventListener('resize',updateUserBar);
 
+// Anima barra de loading
+setTimeout(()=>{const b=document.getElementById('loading-bar');if(b)b.style.width='90%';},100);
+// Timeout de segurança: se demorar mais de 8s, mostra a tela de login
+setTimeout(()=>{
+  const ls=document.getElementById('loading-screen');
+  if(ls&&ls.style.display!=='none'){
+    ls.style.display='none';
+    const ao=document.getElementById('auth-overlay');
+    if(ao&&ao.style.display==='none'&&document.getElementById('main-app').style.display==='none')
+      showAuthScreen();
+  }
+},8000);
 initAuth().catch(()=>{loadLocal();renderAll();initPin();if(C.onopen)setTimeout(()=>doCheck(false),1500);});
 
 if('serviceWorker' in navigator){
