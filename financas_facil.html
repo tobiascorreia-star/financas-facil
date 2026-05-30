@@ -1281,7 +1281,33 @@ function renderDash(){
   const bo=document.getElementById('banner-over');const bw=document.getElementById('banner-warn');
   if(C.visual&&od.length){bo.innerHTML=`<div class="alert-box danger"><span class="alert-ico">🔴</span><div class="alert-body"><div class="alert-title">${od.length} pagamento(s) atrasado(s) — ${fmt(odAmt)}</div>${od.slice(0,3).map(p=>{const eff=effectiveDueByCategory(p.due,p.category);const adj=eff!==p.due?` → ${fmtD(eff)}`:'';return`<div class="alert-item">• ${p.name} · ${fmtD(p.due)}${adj} · ${fmt(p.amount)}</div>`;}).join('')}</div><button class="alert-close" onclick="this.closest('.alert-box').remove()">✕</button></div>`;}else bo.innerHTML='';
   if(C.visual&&w.length){bw.innerHTML=`<div class="alert-box warn"><span class="alert-ico">⚠️</span><div class="alert-body"><div class="alert-title">Vence(m) em até ${C.d1} dia(s) útil(eis): ${w.length} pagamento(s)</div>${w.slice(0,3).map(p=>{const bd=diffBD(p.due,p.category);const eff=effectiveDueByCategory(p.due,p.category);const adj=eff!==p.due?` → ${fmtD(eff)}`:'';return`<div class="alert-item">• ${p.name} · ${fmtD(p.due)}${adj} · ${bd===0?'Hoje':bd+'du'} · ${fmt(p.amount)}</div>`;}).join('')}</div><button class="alert-close" onclick="this.closest('.alert-box').remove()">✕</button></div>`;}else bw.innerHTML='';
-  document.getElementById('metrics').innerHTML=`<div class="mc"><div class="mc-label">💳 Total geral</div><div class="mc-val b">${fmt(total)}</div></div><div class="mc"><div class="mc-label">✅ Pagos</div><div class="mc-val g">${fmt(paid)}</div></div><div class="mc"><div class="mc-label">⏳ Pendentes</div><div class="mc-val a">${fmt(pend)}</div></div><div class="mc"><div class="mc-label">🔴 Atrasados</div><div class="mc-val r">${fmt(odAmt)}</div></div><div class="mc" style="cursor:pointer" onclick="showPage('pay');setF('warn',document.querySelector('.fc'))"><div class="mc-label">📅 Próx. mês</div><div class="mc-val a">${fmt(vencerAmt)}</div><div style="font-size:10px;color:var(--text3);margin-top:2px">${vencer.length} item(s)</div></div>`;
+  const _sub='font-size:10px;color:var(--text3);margin-top:2px';
+  document.getElementById('metrics').innerHTML=
+    `<div class="mc" style="cursor:pointer" onclick="showPage('pay');setF('all',document.querySelector('.fc'))">
+      <div class="mc-label">💳 Total geral</div>
+      <div class="mc-val b">${fmt(total)}</div>
+      <div style="${_sub}">${ac.length} item(s)</div>
+    </div>
+    <div class="mc" style="cursor:pointer" onclick="showPage('pay');setF('paid',document.querySelectorAll('.fc')[2])">
+      <div class="mc-label">✅ Pagos</div>
+      <div class="mc-val g">${fmt(paid)}</div>
+      <div style="${_sub}">${paidList.length} item(s) · mês atual</div>
+    </div>
+    <div class="mc" style="cursor:pointer" onclick="showPage('pay');setF('pending',document.querySelectorAll('.fc')[1])">
+      <div class="mc-label">⏳ Pendentes</div>
+      <div class="mc-val a">${fmt(pend)}</div>
+      <div style="${_sub}">${pendList.length} item(s) · mês atual</div>
+    </div>
+    <div class="mc" style="cursor:pointer" onclick="showPage('pay');setF('overdue',document.querySelectorAll('.fc')[3])">
+      <div class="mc-label">🔴 Atrasados</div>
+      <div class="mc-val r">${fmt(odAmt)}</div>
+      <div style="${_sub}">${od.length} item(s)</div>
+    </div>
+    <div class="mc" style="cursor:pointer" onclick="showPage('pay');setF('warn',document.querySelectorAll('.fc')[4])">
+      <div class="mc-label">📅 Próx. mês</div>
+      <div class="mc-val a">${fmt(vencerAmt)}</div>
+      <div style="${_sub}">${vencer.length} item(s)</div>
+    </div>`;
   const up=ac.filter(p=>p.status!=='paid').sort((a,b)=>(a.due||'').localeCompare(b.due||'')).slice(0,7);
   document.getElementById('upcoming').innerHTML=up.length?up.map(p=>pitem(p,true)).join(''):`<div class="empty"><span class="empty-icon">🎉</span><p>Tudo em dia!</p></div>`;
 }
