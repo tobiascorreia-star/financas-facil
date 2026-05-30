@@ -615,6 +615,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div id="form-register" style="display:none">
       <input class="auth-input" id="reg-name" type="text" placeholder="Seu nome completo">
       <input class="auth-input" id="reg-email" type="email" placeholder="Seu e-mail" autocomplete="email" name="email">
+      <input class="auth-input" id="reg-whatsapp" type="tel" placeholder="WhatsApp com DDD (ex: 85999999999)">
       <div style="position:relative"><input class="auth-input" id="reg-pass" type="password" placeholder="Senha (mín. 6 caracteres)" autocomplete="new-password" name="new-password" onkeydown="if(event.key==='Enter')doRegister()" style="padding-right:42px"><button onclick="togglePass('reg-pass',this)" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text2);font-size:18px;padding:0;line-height:1">👁</button></div>
       <button class="auth-btn primary" onclick="doRegister()">Criar conta</button>
       <button class="auth-btn secondary" onclick="switchForm('login')">Já tenho conta</button>
@@ -924,11 +925,20 @@ async function doLogin(){
 }
 let _skipNextAuthChange=false;
 async function doRegister(){
-  const name=document.getElementById('reg-name').value.trim();const email=document.getElementById('reg-email').value.trim();const pass=document.getElementById('reg-pass').value;
+  const name=document.getElementById('reg-name').value.trim();
+  const email=document.getElementById('reg-email').value.trim();
+  const pass=document.getElementById('reg-pass').value;
+  const whatsapp=(document.getElementById('reg-whatsapp').value||'').trim().replace(/\D/g,'');
   if(!name||!email||!pass){showAuthErr('Preencha todos os campos.');return;}
   if(pass.length<6){showAuthErr('Senha mínima: 6 caracteres.');return;}
-  const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{full_name:name}}});
+  const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{full_name:name,whatsapp}}});
   if(error){showAuthErr(error.message);return;}
+  // Salvar whatsapp no perfil após criação
+  if(data?.user){
+    await sb.from('profiles').upsert({
+      id:data.user.id,email,full_name:name,whatsapp:whatsapp||null
+    },{onConflict:'id'});
+  }
   showAuthErr('✅ Conta criada! Período de avaliação: 7 dias.','green');
   if(data?.session)await handleSession(data.session);
 }
@@ -1054,7 +1064,11 @@ function renderAdminUsers(){
   if(!list.length){el.innerHTML=`<div class="empty"><span class="empty-icon">👥</span><p>Nenhum usuário neste filtro.</p></div>`;return;}
   el.innerHTML=list.map(u=>{
     const ini=(u.full_name||u.email||'?').charAt(0).toUpperCase();const name=u.full_name||u.email.split('@')[0];const date=new Date(u.created_at).toLocaleDateString('pt-BR');
-    return`<div class="admin-user-card"><div class="admin-user-top"><div class="admin-avatar">${ini}</div><div class="admin-user-info"><div class="admin-user-name">${name}</div><div class="admin-user-email">${u.email}</div><div class="admin-user-date">Cadastro: ${date}</div></div></div><div class="admin-user-bottom"><div>${roleBadge(u.role)}</div><div class="admin-actions">${adminActions(u)}</div></div></div>`;
+    const waNorm=(u.whatsapp||'').replace(/\D/g,'');
+    const waLink=waNorm?`<a href="https://wa.me/55${waNorm}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;color:#25D366;font-size:11px;font-weight:600;text-decoration:none;background:#f0fdf4;border:1px solid #86efac;border-radius:20px;padding:2px 9px;margin-top:4px">📱 ${u.whatsapp}</a>`:'<span style="font-size:11px;color:var(--text3);font-style:italic">Sem WhatsApp</span>';
+    const pays_count=u.payments_count||0;const pays_total=Number(u.payments_total||0);
+    const statsHtml=`<div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap"><span style="font-size:11px;background:var(--blue-bg);color:var(--blue-dark);border-radius:20px;padding:2px 9px;border:1px solid var(--blue)">📄 ${pays_count} pag.</span><span style="font-size:11px;background:var(--green-bg);color:var(--green-dark);border-radius:20px;padding:2px 9px;border:1px solid var(--green)">💰 R$ ${pays_total.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></div>`;
+    return`<div class="admin-user-card"><div class="admin-user-top"><div class="admin-avatar">${ini}</div><div class="admin-user-info"><div class="admin-user-name">${name}</div><div class="admin-user-email">${u.email}</div><div class="admin-user-date">Cadastro: ${date}</div><div style="margin-top:4px">${waLink}</div>${statsHtml}</div></div><div class="admin-user-bottom"><div>${roleBadge(u.role)}</div><div class="admin-actions">${adminActions(u)}</div></div></div>`;
   }).join('');
 }
 async function changeUserRole(userId,role){
