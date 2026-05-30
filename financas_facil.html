@@ -1494,6 +1494,7 @@ function setRec(r,el){curRec=r;document.querySelectorAll('.rb').forEach(b=>b.cla
 async function savePay(){
   const n=document.getElementById('fn').value.trim();if(!n){toast('⚠️ Preencha o nome.','err');return;}
   const aStr=document.getElementById('fa').value;const amount=aStr===''||isNaN(parseFloat(aStr))?0:parseFloat(aStr);
+  if(amount===0&&!confirm(`⚠️ O valor de "${n}" está R$ 0,00.\nDeseja salvar assim mesmo?`))return;
   const owner=document.getElementById('fo').value.trim();const tagsRaw=document.getElementById('ftags').value.trim();
   const tags=tagsRaw?tagsRaw.split(',').map(t=>t.trim()).filter(Boolean):[];
   const p={id:eid||Date.now(),name:n,amount,owner,due:document.getElementById('fd').value,paidDate:document.getElementById('fp').value,status:curSt,recur:curRec,category:document.getElementById('fcat').value,wallet:document.getElementById('fwallet').value,currency:document.getElementById('fcur').value||'BRL',tags,notes:document.getElementById('fnotes').value.trim(),archived:false};
