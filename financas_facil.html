@@ -990,7 +990,14 @@ async function loadDataFromSupabase(){
     if(error){try{const r=localStorage.getItem('ff_pays');if(r)pays=JSON.parse(r);}catch(e){pays=[];}}
     else{
       const map=new Map();data.forEach(p=>{map.set(p.id,dbToLocal(p));});
-      pays=Array.from(map.values());
+      const fromDB=Array.from(map.values());
+      if(Date.now()<_selfUpdateUntil){
+        const dbIds=new Set(fromDB.map(p=>p.id));
+        const localOnly=pays.filter(p=>!dbIds.has(p.id));
+        pays=[...fromDB,...localOnly];
+      }else{
+        pays=fromDB;
+      }
       try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
     }
     try{const o=localStorage.getItem('ff_owners');if(o)owners=JSON.parse(o);}catch(e){}
@@ -1026,7 +1033,7 @@ async function sbDeletePayment(id){
 }
 
 let _selfUpdateUntil=0,_isLoadingDB=false;
-function markSelfUpdate(){_selfUpdateUntil=Date.now()+10000;}
+function markSelfUpdate(){_selfUpdateUntil=Date.now()+30000;}
 function initRealtime(){
   if(realtimeSub)sb.removeChannel(realtimeSub);
   const channelName='payments-'+currentUser.id+'-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);
@@ -1528,6 +1535,7 @@ async function savePay(){
   tags.forEach(t=>{if(!allTags.includes(t))allTags.push(t);});
   try{localStorage.setItem('ff_tags',JSON.stringify(allTags));}catch(e){}
   try{localStorage.setItem('ff_pays',JSON.stringify(pays));}catch(e){}
+  markSelfUpdate();
   cmo();renderAll();toast(eid?'✏️ Atualizado!':'✅ Criado!');
   if(currentUser)sbSavePayment(p);
 }
